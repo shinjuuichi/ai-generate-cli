@@ -12,34 +12,19 @@ Generate shell commands from natural language using Google's Gemini API.
 
 ### 2. Install
 
-#### Option A: Install Latest Release (Recommended)
+#### Quick Install (Latest Version)
 
 ```bash
-# Download latest release
-VERSION=$(curl -s https://api.github.com/repos/shinjuuichi/ai-generate-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh"
-chmod +x ~/ai-command.sh
-
-# Add to your ~/.bashrc
-echo "source ~/ai-command.sh" >> ~/.bashrc
-
-# Reload your shell
-source ~/.bashrc
+bash -c 'VERSION=$(curl -s https://api.github.com/repos/shinjuuichi/ai-generate-cli/releases/latest | grep "tag_name" | sed -E "s/.*\"([^\"]+)\".*/\1/") && curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh" && chmod +x ~/ai-command.sh && echo "source ~/ai-command.sh" >> ~/.bashrc && source ~/.bashrc'
 ```
 
-#### Option B: Install Specific Version
+#### Install Specific Version
+
+View all available versions: [Releases](https://github.com/shinjuuichi/ai-generate-cli/releases)
 
 ```bash
-# Replace v1.0.0 with your desired version
-VERSION="v1.0.0"
-curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh"
-chmod +x ~/ai-command.sh
-
-# Add to your ~/.bashrc
-echo "source ~/ai-command.sh" >> ~/.bashrc
-
-# Reload your shell
-source ~/.bashrc
+#You can replace v1.0.0 with any version tag you want to install
+VERSION="v1.0.0" bash -c 'curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh" && chmod +x ~/ai-command.sh && echo "source ~/ai-command.sh" >> ~/.bashrc && source ~/.bashrc'
 ```
 
 ### 3. First Use
@@ -254,7 +239,3 @@ ai-ver
 - grep and sed utilities
 - Internet connection
 - Valid Gemini API key
-
-## License
-
-MIT
