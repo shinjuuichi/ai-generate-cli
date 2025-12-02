@@ -2,7 +2,7 @@
 
 Generate shell commands from natural language using Google's Gemini API.
 
-## Setup
+## Quick Start
 
 ### 1. Get Gemini API Key
 
@@ -10,44 +10,56 @@ Generate shell commands from natural language using Google's Gemini API.
 2. Create a new API key
 3. Copy the key
 
-### 2. Download the Script
+### 2. Install
 
 ```bash
+# Download and install
 curl -o ~/ai-command.sh https://raw.githubusercontent.com/shinjuuichi/ai-generate-cli/main/ai-command.sh
 chmod +x ~/ai-command.sh
+
+# Add to your ~/.bashrc
+echo "source ~/ai-command.sh" >> ~/.bashrc
+
+# Reload your shell
+source ~/.bashrc
 ```
+
+### 3. First Use
+
+Just run the `ai` command and it will guide you through setting up your API key:
 
 ```bash
-# reload shell
-source ~/ai-command.sh
+ai list all pdf files
 ```
 
-### Set API Key (Flexible)
+You'll be prompted to:
 
-You have three options:
+1. Enter your API key
+2. Choose to save it permanently or just for this session
 
-**Option A: Set it when needed**
-
-- Just run `ai` command - it will prompt you for the key
-
-**Option B: Set for current session**
-
-```bash
-export GEMINI_API_KEY='your-api-key-here'
-```
-
-**Option C: Add to ~/.bashrc (permanent)**
-
-```bash
-export GEMINI_API_KEY='your-api-key-here'
-```
+That's it! No manual configuration needed.
 
 ## Usage
 
-### Basic Usage
+### Basic Command
 
 ```bash
 ai <description of what you want to do>
+```
+
+The tool will:
+
+1. Generate the command using AI
+2. Show you the command
+3. Ask if you want to execute it
+
+### Management Commands
+
+```bash
+ai-change      # Change your API key
+ai-reload      # Update to latest version from GitHub
+ai-uninstall   # Uninstall the tool
+reload         # Alias for ai-reload
 ```
 
 ### Examples
@@ -87,48 +99,88 @@ aicmd list all jpg images
 ## Features
 
 - 🤖 Natural language to shell command conversion
-- ✅ Preview command before execution
-- 🛡️ Safe confirmation prompt
-- 🔄 Works with bash and other shells
-- 🌍 OS-aware command generation
-- ⚡ Fast response using Gemini Flash
+- 💾 Flexible API key storage (permanent or session-based)
+- Preview command before execution
+- Safe confirmation prompt
+- Works with bash and other shells
+- OS-aware command generation
+- Fast response using Gemini Flash
+- Easy management commands (change key, reload, uninstall)
+- Secure API key storage with proper file permissions
+- Auto-update with `reload` command
 
-## Configuration
+## API Key Management
 
-The script uses these settings:
+The tool offers flexible options for storing your API key:
 
-- **Model**: gemini-2.5-flash (fast and efficient)
-- **Temperature**: 0.2 (more deterministic outputs)
-- **Max tokens**: 2000 (sufficient for commands)
+### Option 1: Permanent Storage (Recommended)
 
-## Security Notes
+- Saved in `~/.ai-command-config`
+- Encrypted with proper file permissions (600)
+- Automatically loaded on each use
+- Best for regular use
 
-- ⚠️ Always review the generated command before executing
-- ⚠️ Never store API keys in version control
-- ⚠️ Use environment variables for sensitive data
-- ⚠️ The script asks for confirmation before execution
+### Option 2: Session-Only
 
-## Troubleshooting
+- Stored in environment variable for current terminal session
+- Not saved to disk
+- Need to re-enter after closing terminal
+- Best for shared machines or temporary use
 
-### "GEMINI_API_KEY is not set"
+### Changing Your API Key
 
-Make sure you've exported the API key:
+````bash
+## Uninstalling
+
+To completely remove the tool:
 
 ```bash
-export GEMINI_API_KEY='your-actual-key'
-```
+ai-uninstall
+````
+
+This will:
+
+- Remove your saved API key
+- Remove the script from your ~/.bashrc
+- Clean up all functions and aliases
+
+## Troubleshooting
 
 ### "Failed to generate command"
 
 - Check your internet connection
-- Verify your API key is valid
-- Check if you've exceeded API quota
+- Verify your API key is valid with `ai-change`
+- Check if you've exceeded API quota at [Google AI Studio](https://makersuite.google.com/app/apikey)
 
 ### Command doesn't work as expected
 
 - Try being more specific in your description
 - Include the OS or shell type in your request
 - Rephrase the request differently
+
+### Want to change API key?
+
+```bash
+ai-change
+```
+
+### Script not loading after install?
+
+```bash
+source ~/.bashrc
+# or
+reload
+```
+
+### Want to update to the latest version?
+
+```bash
+reload
+# or
+ai-reload
+```
+
+This will automatically download and reload the latest version from GitHub.
 
 ## Requirements
 
