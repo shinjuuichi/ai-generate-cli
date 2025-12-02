@@ -49,17 +49,121 @@ That's it! No manual configuration needed.
 
 ## Usage
 
-### Basic Command
+### Basic Commands
 
 ```bash
+# Standard usage
 ai <description of what you want to do>
+
+# Auto-run without confirmation
+ai -y <description>
+
+# Pretty colored output
+ai --pretty <description>
+
+# Show help
+ai --help
 ```
 
-The tool will:
+The basic `ai` tool will:
 
 1. Generate the command using AI
 2. Show you the command
-3. Ask if you want to execute it
+3. Ask if you want to execute it (unless using `-y` flag)
+
+### 📜 Command History
+
+Track and review all commands you've generated:
+
+```bash
+# View all history
+ai-history
+
+# View last 10 commands
+ai-history -n 10
+
+# Clear history
+ai-history --clear
+```
+
+### 📝 Script Generation
+
+Generate complete, production-ready shell scripts:
+
+```bash
+ai-script <description>
+
+# Example
+ai-script backup home directory daily
+ai-script monitor system resources and send email alerts
+ai-script batch convert images to webp format
+```
+
+The generated script will include:
+
+- Shebang and proper structure
+- Error handling
+- Comments and documentation
+- Best practices
+
+### 🔍 Command Explanation
+
+Understand what a command does before running it:
+
+```bash
+ai-explain "<command>"
+
+# Examples
+ai-explain "rm -rf /var/log/*"
+ai-explain "find . -type f -name '*.log' -mtime +30 -delete"
+ai-explain "curl -X POST https://api.example.com/data"
+```
+
+Returns:
+
+- What the command does
+- Explanation of each part/flag
+- Potential risks and warnings
+- Example output
+
+### 🎯 Multiple Command Options
+
+Get 3 different ways to accomplish the same task:
+
+```bash
+ai-multi <description>
+
+# Example
+ai-multi list large files
+ai-multi find duplicate files
+ai-multi monitor disk usage
+```
+
+Choose which variant to execute interactively.
+
+### 🤖 Model Management
+
+Switch between different Gemini models for speed vs. capability:
+
+```bash
+# Show current model
+ai-model
+
+# List available models
+ai-model ls
+
+# Switch model
+ai-model gemini-2.5-pro
+ai-model gemini-2.5-flash
+```
+
+Available models:
+
+- `gemini-2.5-flash` (default) - Best price-performance, ideal for large scale processing and agentic tasks
+- `gemini-2.5-flash-lite` - Fastest model optimized for cost-efficiency and high throughput
+- `gemini-2.5-pro` - Advanced thinking model for complex reasoning in code, math, and STEM
+- `gemini-2.0-flash` - Second generation workhorse with 1M token context window
+- `gemini-2.0-flash-lite` - Second generation fast model with 1M token context window
 
 ### Management Commands
 
@@ -67,7 +171,7 @@ The tool will:
 ai-change            # Change your API key
 ai-reload            # Reload local script
 ai-update            # Update to latest version (interactive)
-ai-update <version>  # Install specific version (e.g., ai-update 1.0.0)
+ai-update <version>  # Install specific version (e.g., ai-update 1.1.0)
 ai-version           # Show current version
 ai-list-versions     # List all available versions
 ai-uninstall         # Uninstall the tool
@@ -77,6 +181,8 @@ ai-ver               # Alias for ai-version
 ```
 
 ### Examples
+
+#### Basic Usage
 
 ```bash
 # List all PDF files
@@ -96,36 +202,97 @@ ai create a backup of all txt files
 
 # Process management
 ai show top 10 memory consuming processes
+```
 
-# Git operations
+#### Advanced Usage
+
+```bash
+# Auto-run mode (no confirmation)
+ai -y delete log files older than 30 days
+
+# Pretty output with colors
+ai --pretty show disk usage by directory
+
+# Generate a script
+ai-script create daily backup with rotation
+
+# Explain a dangerous command
+ai-explain "dd if=/dev/zero of=/dev/sda"
+
+# Get multiple options
+ai-multi compress large files
+```
+
+#### Git Operations
+
+```bash
 ai show git commits from last week
+ai create a new branch from main
+ai revert last commit safely
+```
 
-# Archive operations
+#### Archive Operations
+
+```bash
 ai compress all log files into a tar.gz
+ai extract tar.gz file preserving permissions
 ```
 
 ### Using the Alias
 
 ```bash
 aicmd list all jpg images
+aihelp  # Show help
 ```
 
 ## Features
 
+### Core Features
+
 - Natural language to shell command conversion
-- Flexible API key storage (permanent or session-based)
-- Version management with GitHub releases
-- Easy upgrade/downgrade between versions (e.g., 1.0.0, 1.1.0)
-- List all available versions
-- Install specific version directly
 - Preview command before execution
 - Safe confirmation prompt
 - Works with bash and other shells
 - OS-aware command generation
-- Fast response using Gemini Flash
-- Easy management commands (change key, reload, uninstall)
-- Secure API key storage with proper file permissions
+- Fast response using Gemini models
+
+### New in v1.1.0
+
+- **Command History Tracking** - Never lose a generated command
+- **Auto-run Mode** - Skip confirmation with `-y` flag
+- **Script Generation** - Create full scripts, not just one-liners
+- **Command Explanation** - Understand risks before running
+- **Multiple Options** - See different approaches to the same task
+- **Offline Fallback** - Basic suggestions when API is down
+- **Pretty Output** - Color-coded display with `--pretty`
+- **Model Selection** - Choose the right model for your needs
+
+### Version Management
+
+- Easy upgrade/downgrade between versions
+- List all available versions
+- Install specific version directly
 - Auto-update with `reload` command
+
+### Security
+
+- Flexible API key storage (permanent or session-based)
+- Secure API key storage with proper file permissions (600)
+- Command preview before execution
+- Risk warnings in explanations
+
+## 🔌 Offline Fallback
+
+When the API is unavailable, the tool provides basic suggestions for common tasks:
+
+- List files
+- Delete logs
+- Find large files
+- Check disk space
+- View memory usage
+- Show processes
+- Network info
+- Count lines of code
 
 ## API Key Management
 
@@ -147,18 +314,23 @@ The tool offers flexible options for storing your API key:
 
 ### Changing Your API Key
 
-````bash
+```bash
+ai-change
+```
+
 ## Uninstalling
 
 To completely remove the tool:
 
 ```bash
 ai-uninstall
-````
+```
 
 This will:
 
 - Remove your saved API key
+- Remove command history
+- Remove model configuration
 - Remove the script from your ~/.bashrc
 - Clean up all functions and aliases
 
@@ -172,14 +344,52 @@ This will:
 
 ### Command doesn't work as expected
 
+### "Failed to generate command"
+
+- Check your internet connection
+- Verify your API key is valid with `ai-change`
+- Check if you've exceeded API quota at [Google AI Studio](https://makersuite.google.com/app/apikey)
+- If offline, the tool will try to provide a basic suggestion
+
+### Command doesn't work as expected
+
 - Try being more specific in your description
 - Include the OS or shell type in your request
 - Rephrase the request differently
+- Try `ai-multi` to see alternative approaches
+- Use `ai-explain` to understand what the command does first
+
+### Want to see what a command does?
+
+```bash
+ai-explain "command here"
+```
+
+### Want multiple options for the same task?
+
+```bash
+ai-multi your task description
+```
+
+### Want to check command history?
+
+```bash
+ai-history          # View all
+ai-history -n 20    # Last 20
+ai-history --clear  # Clear history
+```
 
 ### Want to change API key?
 
 ```bash
 ai-change
+```
+
+### Want to switch Gemini model?
+
+```bash
+ai-model ls          # List available models
+ai-model gemini-1.5-pro  # Switch to specific model
 ```
 
 ### Script not loading after install?
@@ -221,9 +431,9 @@ This will show you available versions and let you choose:
 ai-update
 
 # Direct version install
-ai-update 1.0.0
+ai-update 1.1.0
 # or
-ai-update v1.0.0
+ai-update v1.1.0
 
 # List all available versions first
 ai-list-versions
@@ -237,6 +447,33 @@ ai-version
 ai-ver
 ```
 
+## Command Reference
+
+### Main Commands
+
+| Command              | Description                           |
+| -------------------- | ------------------------------------- |
+| `ai <desc>`          | Generate and optionally run a command |
+| `ai -y <desc>`       | Auto-run without confirmation         |
+| `ai --pretty <desc>` | Use colored output                    |
+| `ai --help`          | Show help message                     |
+| `ai-script <desc>`   | Generate a full shell script          |
+| `ai-explain "<cmd>"` | Explain a command with risks          |
+| `ai-multi <desc>`    | Generate 3 command variants           |
+| `ai-history`         | View command history                  |
+| `ai-model`           | Manage Gemini models                  |
+
+### Management Commands
+
+| Command            | Description       |
+| ------------------ | ----------------- |
+| `ai-change`        | Change API key    |
+| `ai-reload`        | Reload script     |
+| `ai-update`        | Update version    |
+| `ai-version`       | Show version info |
+| `ai-list-versions` | List all versions |
+| `ai-uninstall`     | Remove the tool   |
+
 ## Requirements
 
 - Bash shell (or compatible shell)
@@ -244,3 +481,19 @@ ai-ver
 - grep and sed utilities
 - Internet connection
 - Valid Gemini API key
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+If you encounter any issues or have questions:
+
+1. Check the [Troubleshooting](#troubleshooting) section
+2. View command help with `ai --help`
+3. Open an issue on [GitHub](https://github.com/shinjuuichi/ai-generate-cli/issues)

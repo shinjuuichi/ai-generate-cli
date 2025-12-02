@@ -4,11 +4,33 @@
 # Add this to your ~/.bashrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="1.0.3"
+VERSION="1.1.0"
 
 # Config file location
 AI_CONFIG_FILE="$HOME/.ai-command-config"
 AI_VERSION_FILE="$HOME/.ai-command-version"
+AI_HISTORY_FILE="$HOME/.ai-command-history"
+AI_MODEL_FILE="$HOME/.ai-command-model"
+
+# Default Gemini model
+DEFAULT_MODEL="gemini-2.5-flash"
+
+# Available Gemini models
+GEMINI_MODELS=(
+    "gemini-2.5-flash"
+    "gemini-2.5-flash-lite"
+    "gemini-2.5-pro"
+    "gemini-2.0-flash"
+    "gemini-2.0-flash-lite"
+)
+
+# ANSI Color codes
+COLOR_GREEN='\033[0;32m'
+COLOR_BLUE='\033[0;34m'
+COLOR_YELLOW='\033[1;33m'
+COLOR_RED='\033[0;31m'
+COLOR_CYAN='\033[0;36m'
+COLOR_RESET='\033[0m'
 
 # GitHub repository
 GITHUB_OWNER="shinjuuichi"
@@ -34,6 +56,78 @@ _get_current_version() {
 _save_version() {
     local version="$1"
     echo "$version" > "$AI_VERSION_FILE"
+}
+
+# Get current model
+_get_current_model() {
+    if [ -f "$AI_MODEL_FILE" ]; then
+        cat "$AI_MODEL_FILE"
+    else
+        echo "$DEFAULT_MODEL"
+    fi
+}
+
+# Save model to file
+_save_model() {
+    local model="$1"
+    echo "$model" > "$AI_MODEL_FILE"
+}
+
+# Add command to history
+_add_to_history() {
+    local command="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] $command" >> "$AI_HISTORY_FILE"
+}
+
+# Colorized output function
+_print_colored() {
+    local color="$1"
+    local text="$2"
+    if [ "$USE_COLOR" = "true" ]; then
+        echo -e "${color}${text}${COLOR_RESET}"
+    else
+        echo "$text"
+    fi
+}
+
+# Offline fallback suggestions
+_offline_suggest() {
+    local description="$1"
+    local suggestion=""
+    
+    case "$description" in
+        *"list files"*|*"list file"*|*"show files"*)
+            suggestion="ls -lah"
+            ;;
+        *"delete"*"log"*|*"remove"*"log"*)
+            suggestion="find . -name '*.log' -type f -delete"
+            ;;
+        *"find large"*|*"large files"*)
+            suggestion="find . -type f -size +100M -exec ls -lh {} \\;"
+            ;;
+        *"disk space"*|*"disk usage"*)
+            suggestion="df -h"
+            ;;
+        *"memory"*|*"ram"*)
+            suggestion="free -h"
+            ;;
+        *"process"*|*"running"*)
+            suggestion="ps aux"
+            ;;
+        *"network"*|*"ip"*)
+            suggestion="ip addr show"
+            ;;
+        *"count lines"*)
+            suggestion="find . -type f -name '*.py' | xargs wc -l"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+    
+    echo "$suggestion"
+    return 0
 }
 
 # List available versions from GitHub releases
@@ -162,10 +256,353 @@ ai-version() {
     echo "Use 'ai-update <version>' to install specific version (e.g., ai-update 1.0.0)"
 }
 
+# Show help
+ai-help() {
+    echo "AI Command Generator - Help"
+    echo "============================"
+    echo ""
+    echo "BASIC USAGE:"
+    echo "  ai <description>              Generate and optionally run a command"
+    echo "  ai -y <description>           Auto-run without confirmation"
+    echo "  ai --pretty <description>     Use colored output"
+    echo "  ai --help                     Show this help message"
+    echo ""
+    echo "SCRIPT GENERATION:"
+    echo "  ai-script <description>       Generate a full shell script"
+    echo ""
+    echo "COMMAND EXPLANATION:"
+    echo "  ai-explain \"<command>\"        Explain what a command does"
+    echo ""
+    echo "MULTIPLE OPTIONS:"
+    echo "  ai-multi <description>        Generate 3 different command variants"
+    echo ""
+    echo "HISTORY:"
+    echo "  ai-history                    Show command history"
+    echo "  ai-history -n <number>        Show last N commands"
+    echo "  ai-history --clear            Clear history"
+    echo ""
+    echo "MODEL MANAGEMENT:"
+    echo "  ai-model                      Show current model"
+    echo "  ai-model ls                   List available Gemini models"
+    echo "  ai-model <name>               Switch to a specific model"
+    echo ""
+    echo "CONFIGURATION:"
+    echo "  ai-change                     Change API key"
+    echo "  ai-reload                     Reload local script"
+    echo "  ai-version                    Show version info"
+    echo ""
+    echo "UPDATE & MAINTENANCE:"
+    echo "  ai-update                     Update to latest version"
+    echo "  ai-update <version>           Install specific version"
+    echo "  ai-list-versions              List all available versions"
+    echo "  ai-uninstall                  Uninstall the tool"
+    echo ""
+    echo "EXAMPLES:"
+    echo "  ai list all pdf files"
+    echo "  ai -y delete old logs"
+    echo "  ai-explain \"rm -rf /var/log/*\""
+    echo "  ai-script backup home directory daily"
+    echo "  ai-multi list large files"
+}
+
+# View command history
+ai-history() {
+    if [ ! -f "$AI_HISTORY_FILE" ]; then
+        echo "No command history found."
+        return 0
+    fi
+    
+    case "$1" in
+        --clear)
+            read -p "Clear all command history? (y/n): " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                rm "$AI_HISTORY_FILE"
+                echo "Command history cleared."
+            else
+                echo "Operation cancelled."
+            fi
+            ;;
+        -n)
+            if [ -z "$2" ]; then
+                echo "Error: Please specify number of commands to show"
+                echo "Usage: ai-history -n <number>"
+                return 1
+            fi
+            tail -n "$2" "$AI_HISTORY_FILE"
+            ;;
+        *)
+            cat "$AI_HISTORY_FILE"
+            ;;
+    esac
+}
+
+# Model management
+ai-model() {
+    if [ -z "$1" ]; then
+        local current_model=$(_get_current_model)
+        echo "Current model: $current_model"
+        echo ""
+        echo "Use 'ai-model ls' to list available models"
+        echo "Use 'ai-model <name>' to switch model"
+        return 0
+    fi
+    
+    if [ "$1" = "ls" ] || [ "$1" = "list" ]; then
+        echo "Available Gemini models:"
+        echo "========================"
+        local current_model=$(_get_current_model)
+        for model in "${GEMINI_MODELS[@]}"; do
+            if [ "$model" = "$current_model" ]; then
+                echo "* $model (current)"
+            else
+                echo "  $model"
+            fi
+        done
+        echo ""
+        echo "Use 'ai-model <name>' to switch model"
+        return 0
+    fi
+    
+    # Check if model is valid
+    local new_model="$1"
+    local valid=0
+    for model in "${GEMINI_MODELS[@]}"; do
+        if [ "$model" = "$new_model" ]; then
+            valid=1
+            break
+        fi
+    done
+    
+    if [ $valid -eq 0 ]; then
+        echo "Error: Invalid model name '$new_model'"
+        echo ""
+        echo "Available models:"
+        for model in "${GEMINI_MODELS[@]}"; do
+            echo "  $model"
+        done
+        return 1
+    fi
+    
+    _save_model "$new_model"
+    echo "Model changed to: $new_model"
+}
+
+# Explain a command
+ai-explain() {
+    _load_api_key
+    
+    if [ -z "$GEMINI_API_KEY" ]; then
+        echo "Error: Gemini API key not found. Please run 'ai' first to set up your API key."
+        return 1
+    fi
+    
+    if [ -z "$*" ]; then
+        echo "Usage: ai-explain \"<command>\""
+        echo "Example: ai-explain \"rm -rf /var/log/*\""
+        return 1
+    fi
+    
+    local command_to_explain="$*"
+    local current_model=$(_get_current_model)
+    
+    local prompt="Explain this shell command in detail. Include:
+1. What it does
+2. Each part/flag explained
+3. Potential risks or warnings
+4. Example output (if applicable)
+
+Command: $command_to_explain"
+
+    _print_colored "$COLOR_CYAN" "Analyzing command..."
+    echo ""
+    
+    local response=$(curl -s -X POST \
+        "https://generativelanguage.googleapis.com/v1/models/${current_model}:generateContent?key=$GEMINI_API_KEY" \
+        -H 'Content-Type: application/json' \
+        -d "{
+            \"contents\": [{
+                \"parts\": [{
+                    \"text\": \"$prompt\"
+                }]
+            }],
+            \"generationConfig\": {
+                \"temperature\": 0.3,
+                \"maxOutputTokens\": 2000
+            }
+        }")
+    
+    if echo "$response" | grep -q "API_KEY_INVALID\|API key not valid"; then
+        echo "Error: Invalid API key. Use 'ai-change' to update your key."
+        return 1
+    fi
+    
+    local explanation=$(echo "$response" | grep -o '"text": *"[^"]*"' | head -1 | sed 's/"text": *"\(.*\)"/\1/' | sed 's/\\n/\n/g')
+    
+    if [ -z "$explanation" ]; then
+        echo "Error: Failed to get explanation"
+        return 1
+    fi
+    
+    echo "$explanation"
+}
+
+# Generate multiple command options
+ai-multi() {
+    _load_api_key
+    
+    if [ -z "$GEMINI_API_KEY" ]; then
+        echo "Error: Gemini API key not found. Please run 'ai' first to set up your API key."
+        return 1
+    fi
+    
+    if [ -z "$*" ]; then
+        echo "Usage: ai-multi <description>"
+        echo "Example: ai-multi list large files"
+        return 1
+    fi
+    
+    local description="$*"
+    local shell_type=$(basename "$SHELL")
+    local os_type=$(uname -s)
+    local current_model=$(_get_current_model)
+    
+    local prompt="Generate 3 different shell command variants for $shell_type on $os_type that accomplish: $description
+
+Format your response as:
+Option 1: [command]
+Option 2: [command]
+Option 3: [command]
+
+Each command should use a different approach or tool.
+Keep commands concise and on one line each."
+
+    _print_colored "$COLOR_CYAN" "Generating multiple options..."
+    echo ""
+    
+    local response=$(curl -s -X POST \
+        "https://generativelanguage.googleapis.com/v1/models/${current_model}:generateContent?key=$GEMINI_API_KEY" \
+        -H 'Content-Type: application/json' \
+        -d "{
+            \"contents\": [{
+                \"parts\": [{
+                    \"text\": \"$prompt\"
+                }]
+            }],
+            \"generationConfig\": {
+                \"temperature\": 0.5,
+                \"maxOutputTokens\": 2000
+            }
+        }")
+    
+    if echo "$response" | grep -q "API_KEY_INVALID\|API key not valid"; then
+        echo "Error: Invalid API key. Use 'ai-change' to update your key."
+        return 1
+    fi
+    
+    local options=$(echo "$response" | grep -o '"text": *"[^"]*"' | head -1 | sed 's/"text": *"\(.*\)"/\1/' | sed 's/\\n/\n/g')
+    
+    if [ -z "$options" ]; then
+        echo "Error: Failed to generate options"
+        return 1
+    fi
+    
+    echo "$options"
+    echo ""
+    read -p "Enter option number to execute (1-3), or press Enter to skip: " choice
+    
+    if [[ "$choice" =~ ^[1-3]$ ]]; then
+        local selected_command=$(echo "$options" | grep "^Option $choice:" | sed "s/Option $choice: //")
+        if [ -n "$selected_command" ]; then
+            echo ""
+            _print_colored "$COLOR_GREEN" "Executing: $selected_command"
+            eval "$selected_command"
+            _add_to_history "$selected_command"
+        fi
+    fi
+}
+
+# Generate a full script
+ai-script() {
+    _load_api_key
+    
+    if [ -z "$GEMINI_API_KEY" ]; then
+        echo "Error: Gemini API key not found. Please run 'ai' first to set up your API key."
+        return 1
+    fi
+    
+    if [ -z "$*" ]; then
+        echo "Usage: ai-script <description>"
+        echo "Example: ai-script backup home directory daily"
+        return 1
+    fi
+    
+    local description="$*"
+    local shell_type=$(basename "$SHELL")
+    local os_type=$(uname -s)
+    local current_model=$(_get_current_model)
+    
+    local prompt="Generate a complete, production-ready POSIX-compatible shell script for $shell_type on $os_type that accomplishes: $description
+
+Requirements:
+- Include #!/bin/bash shebang
+- Add error handling
+- Include comments explaining each section
+- Make it executable and safe
+- Use best practices
+- Return ONLY the script code, no explanations outside the script"
+
+    _print_colored "$COLOR_CYAN" "Generating script..."
+    echo ""
+    
+    local response=$(curl -s -X POST \
+        "https://generativelanguage.googleapis.com/v1/models/${current_model}:generateContent?key=$GEMINI_API_KEY" \
+        -H 'Content-Type: application/json' \
+        -d "{
+            \"contents\": [{
+                \"parts\": [{
+                    \"text\": \"$prompt\"
+                }]
+            }],
+            \"generationConfig\": {
+                \"temperature\": 0.3,
+                \"maxOutputTokens\": 4000
+            }
+        }")
+    
+    if echo "$response" | grep -q "API_KEY_INVALID\|API key not valid"; then
+        echo "Error: Invalid API key. Use 'ai-change' to update your key."
+        return 1
+    fi
+    
+    local script=$(echo "$response" | grep -o '"text": *"[^"]*"' | head -1 | sed 's/"text": *"\(.*\)"/\1/' | sed 's/\\n/\n/g' | sed 's/```bash//g' | sed 's/```//g')
+    
+    if [ -z "$script" ]; then
+        echo "Error: Failed to generate script"
+        return 1
+    fi
+    
+    echo "$script"
+    echo ""
+    read -p "Save this script to a file? (y/n): " -n 1 -r
+    echo ""
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        read -p "Enter filename (e.g., backup.sh): " filename
+        if [ -n "$filename" ]; then
+            echo "$script" > "$filename"
+            chmod +x "$filename"
+            _print_colored "$COLOR_GREEN" "Script saved to: $filename"
+            _print_colored "$COLOR_GREEN" "Made executable. Run with: ./$filename"
+        fi
+    fi
+}
+
 # Aliases for convenience
 alias reload='ai-reload'
 alias update='ai-update'
 alias ai-ver='ai-version'
+alias aihelp='ai-help'
 
 # Load API key from config file
 _load_api_key() {
@@ -244,6 +681,18 @@ ai-uninstall() {
         echo "Removed version file"
     fi
     
+    # Remove history file
+    if [ -f "$AI_HISTORY_FILE" ]; then
+        rm "$AI_HISTORY_FILE"
+        echo "Removed history file"
+    fi
+    
+    # Remove model file
+    if [ -f "$AI_MODEL_FILE" ]; then
+        rm "$AI_MODEL_FILE"
+        echo "Removed model file"
+    fi
+    
     # Remove from bashrc
     if [ -f "$HOME/.bashrc" ]; then
         sed -i '/source.*ai-command\.sh/d' "$HOME/.bashrc"
@@ -251,11 +700,12 @@ ai-uninstall() {
     fi
     
     # Unset functions and aliases
-    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions _load_api_key _save_api_key _get_current_version _save_version
+    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions ai-help ai-history ai-model ai-explain ai-multi ai-script _load_api_key _save_api_key _get_current_version _save_version _get_current_model _save_model _add_to_history _print_colored _offline_suggest
     unalias aicmd 2>/dev/null
     unalias reload 2>/dev/null
     unalias update 2>/dev/null
     unalias ai-ver 2>/dev/null
+    unalias aihelp 2>/dev/null
     
     # Remove the script file itself
     if [ -f "$HOME/ai-command.sh" ]; then
@@ -270,6 +720,39 @@ ai-uninstall() {
 }
 
 ai() {
+    # Parse flags
+    local auto_run=false
+    local use_pretty=false
+    local args=()
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -y|--yes)
+                auto_run=true
+                shift
+                ;;
+            --pretty)
+                use_pretty=true
+                shift
+                ;;
+            --help|-h)
+                ai-help
+                return 0
+                ;;
+            *)
+                args+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    # Set color usage
+    if [ "$use_pretty" = true ]; then
+        USE_COLOR=true
+    else
+        USE_COLOR=false
+    fi
+    
     # Load API key from config if exists
     _load_api_key
     
@@ -305,27 +788,18 @@ ai() {
     fi
 
     # Check if user provided a description
-    if [ -z "$*" ]; then
-        echo "Usage: ai <description of what you want to do>"
-        echo "Example: ai list all pdf files in current directory"
-        echo ""
-        echo "Other commands:"
-        echo "  ai-change          - Change API key"
-        echo "  ai-reload          - Reload local script"
-        echo "  ai-update          - Update to latest version or choose specific version"
-        echo "  ai-update <ver>    - Install specific version (e.g., ai-update 1.0.0)"
-        echo "  ai-version         - Show current version"
-        echo "  ai-list-versions   - List all available versions"
-        echo "  ai-uninstall       - Uninstall this tool"
+    if [ ${#args[@]} -eq 0 ]; then
+        ai-help
         return 1
     fi
 
     # Get the user's shell command description
-    local description="$*"
+    local description="${args[*]}"
     
     # Detect the shell and OS
     local shell_type=$(basename "$SHELL")
     local os_type=$(uname -s)
+    local current_model=$(_get_current_model)
     
     # Create the prompt for Gemini
     local prompt="You are a shell command expert. Generate ONLY the shell command for $shell_type on $os_type that does the following: $description
@@ -339,7 +813,7 @@ Rules:
 
     # Make API call to Gemini
     local response=$(curl -s -X POST \
-        "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY" \
+        "https://generativelanguage.googleapis.com/v1/models/${current_model}:generateContent?key=$GEMINI_API_KEY" \
         -H 'Content-Type: application/json' \
         -d "{
             \"contents\": [{
@@ -377,23 +851,42 @@ Rules:
 
     # Check if we got a valid response
     if [ -z "$command" ]; then
-        echo "Error: Failed to generate command"
-        echo "API Response: $response"
-        return 1
+        _print_colored "$COLOR_YELLOW" "API request failed. Trying offline suggestion..."
+        command=$(_offline_suggest "$description")
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to generate command and no offline suggestion available"
+            echo "API Response: $response"
+            return 1
+        fi
+        _print_colored "$COLOR_YELLOW" "Using offline suggestion:"
     fi
 
     # Display the generated command
-    echo "Generated command:"
-    echo "$command"
+    if [ "$use_pretty" = true ]; then
+        _print_colored "$COLOR_GREEN" "Generated command:"
+        _print_colored "$COLOR_CYAN" "$command"
+    else
+        echo "Generated command:"
+        echo "$command"
+    fi
     echo ""
     
-    # Ask user if they want to execute it
-    read -p "Execute this command? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # Save to history
+    _add_to_history "$command"
+    
+    # Execute based on auto_run flag
+    if [ "$auto_run" = true ]; then
+        _print_colored "$COLOR_GREEN" "Executing automatically..."
         eval "$command"
     else
-        echo "Command not executed. You can copy it from above."
+        # Ask user if they want to execute it
+        read -p "Execute this command? (y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            eval "$command"
+        else
+            echo "Command not executed. You can copy it from above."
+        fi
     fi
 }
 
