@@ -57,9 +57,11 @@ The tool will:
 
 ```bash
 ai-change      # Change your API key
-ai-reload      # Update to latest version from GitHub
+ai-reload      # Reload local script
+ai-update      # Update to latest version from GitHub
 ai-uninstall   # Uninstall the tool
 reload         # Alias for ai-reload
+update         # Alias for ai-update
 ```
 
 ### Examples
@@ -172,12 +174,22 @@ source ~/.bashrc
 reload
 ```
 
-### Want to update to the latest version?
+### Want to reload the script?
 
 ```bash
 reload
 # or
 ai-reload
+```
+
+This will reload the local script file.
+
+### Want to update to the latest version?
+
+```bash
+update
+# or
+ai-update
 ```
 
 This will automatically download and reload the latest version from GitHub.

@@ -6,17 +6,25 @@
 # Config file location
 AI_CONFIG_FILE="$HOME/.ai-command-config"
 
-# Reload shell function
+# Reload shell function (reload local file)
 ai-reload() {
-    echo "Reloading AI Command Generator..."
-    curl -s -o ~/ai-command.sh https://raw.githubusercontent.com/shinjuuichi/ai-generate-cli/main/ai-command.sh
-    chmod +x ~/ai-command.sh
+    echo "Reloading AI Command Generator from local file..."
     source ~/ai-command.sh
     echo "✓ Successfully reloaded!"
 }
 
-# Alias for convenience
+# Update function (fetch latest version from GitHub)
+ai-update() {
+    echo "Updating AI Command Generator from GitHub..."
+    curl -s -o ~/ai-command.sh https://raw.githubusercontent.com/shinjuuichi/ai-generate-cli/main/ai-command.sh
+    chmod +x ~/ai-command.sh
+    source ~/ai-command.sh
+    echo "✓ Successfully updated to latest version!"
+}
+
+# Aliases for convenience
 alias reload='ai-reload'
+alias update='ai-update'
 
 # Load API key from config file
 _load_api_key() {
@@ -94,9 +102,10 @@ ai-uninstall() {
     fi
     
     # Unset functions and aliases
-    unset -f ai aicmd ai-change ai-uninstall ai-reload _load_api_key _save_api_key
+    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update _load_api_key _save_api_key
     unalias aicmd 2>/dev/null
     unalias reload 2>/dev/null
+    unalias update 2>/dev/null
     
     echo ""
     echo "AI Command Generator uninstalled successfully!"
@@ -145,7 +154,8 @@ ai() {
         echo ""
         echo "Other commands:"
         echo "  ai-change     - Change API key"
-        echo "  ai-reload     - Reload/update the script"
+        echo "  ai-reload     - Reload local script"
+        echo "  ai-update     - Update to latest version from GitHub"
         echo "  ai-uninstall  - Uninstall this tool"
         return 1
     fi
