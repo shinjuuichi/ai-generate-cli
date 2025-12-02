@@ -165,10 +165,33 @@ Available models:
 - `gemini-2.0-flash` - Second generation workhorse with 1M token context window
 - `gemini-2.0-flash-lite` - Second generation fast model with 1M token context window
 
+### 📊 API Usage Check
+
+Monitor your API key status and rate limits:
+
+```bash
+ai-usage
+```
+
+This command will:
+
+- Check if your API key is valid and active
+- Display current rate limits for your tier
+- Show which model you're currently using
+- Provide helpful information if you've hit rate limits
+- Give tips on managing API quota
+
+Perfect for:
+
+- Checking why requests are failing
+- Monitoring before bulk operations
+- Understanding your current API limits
+
 ### Management Commands
 
 ```bash
 ai-change            # Change your API key
+ai-usage             # Check API usage and rate limits
 ai-reload            # Reload local script
 ai-update            # Update to latest version (interactive)
 ai-update <version>  # Install specific version (e.g., ai-update 1.1.0)
@@ -212,6 +235,9 @@ ai -y delete log files older than 30 days
 
 # Pretty output with colors
 ai --pretty show disk usage by directory
+
+# Check API usage and limits
+ai-usage
 
 # Generate a script
 ai-script create daily backup with rotation

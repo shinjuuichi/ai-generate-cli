@@ -4,7 +4,7 @@
 # Add this to your ~/.bashrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="1.1.1"
+VERSION="1.1.2"
 
 # Config file location
 AI_CONFIG_FILE="$HOME/.ai-command-config"
@@ -291,6 +291,9 @@ ai-help() {
     echo "  ai-model ls                   List available Gemini models"
     echo "  ai-model <name>               Switch to a specific model"
     echo ""
+    echo "API USAGE:"
+    echo "  ai-usage                      Check API quota and rate limits"
+    echo ""
     echo "CONFIGURATION:"
     echo "  ai-change                     Change API key"
     echo "  ai-reload                     Reload local script"
@@ -391,6 +394,113 @@ ai-model() {
     
     _save_model "$new_model"
     echo "Model changed to: $new_model"
+}
+
+# Check API usage and quota limits
+ai-usage() {
+    _load_api_key
+    
+    if [ -z "$GEMINI_API_KEY" ]; then
+        echo "Error: Gemini API key not found. Please run 'ai' first to set up your API key."
+        return 1
+    fi
+    
+    local current_model=$(_get_current_model)
+    
+    _print_colored "$COLOR_CYAN" "Checking API usage and rate limits..."
+    echo ""
+    
+    # Test API with a minimal request to check if it's working
+    local test_response=$(curl -s -X POST \
+        "https://generativelanguage.googleapis.com/v1/models/${current_model}:generateContent?key=$GEMINI_API_KEY" \
+        -H 'Content-Type: application/json' \
+        -d '{
+            "contents": [{
+                "parts": [{
+                    "text": "Say OK"
+                }]
+            }],
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 10
+            }
+        }')
+    
+    # Check for various error types
+    if echo "$test_response" | grep -q "API_KEY_INVALID\|API key not valid"; then
+        _print_colored "$COLOR_RED" "Status: Invalid API Key"
+        echo ""
+        echo "Your API key is not valid or has expired."
+        echo "Please update your API key using: ai-change"
+        return 1
+    elif echo "$test_response" | grep -q "RESOURCE_EXHAUSTED\|quota exceeded\|rate limit"; then
+        _print_colored "$COLOR_RED" "Status: Rate Limit Reached"
+        echo ""
+        echo "You have exceeded your API quota or rate limit."
+        echo ""
+        
+        # Extract rate limit info if available
+        local error_message=$(echo "$test_response" | grep -o '"message": *"[^"]*"' | head -1 | sed 's/"message": *"\(.*\)"/\1/')
+        if [ -n "$error_message" ]; then
+            _print_colored "$COLOR_YELLOW" "Error details:"
+            echo "$error_message"
+            echo ""
+        fi
+        
+        echo "Rate limit information:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Gemini API uses the following limits:"
+        echo ""
+        echo "Free tier limits (may vary by model):"
+        echo "  • Requests per minute: 15"
+        echo "  • Requests per day: 1,500"
+        echo "  • Tokens per minute: ~32,000"
+        echo ""
+        echo "What you can do:"
+        echo "  1. Wait a few minutes and try again"
+        echo "  2. Check your usage at: https://aistudio.google.com/"
+        echo "  3. Consider upgrading to a paid plan"
+        echo "  4. Switch to a different model with: ai-model ls"
+        echo ""
+        return 1
+    elif echo "$test_response" | grep -q '"text"'; then
+        _print_colored "$COLOR_GREEN" "✓ Status: API Key Active & Working"
+        echo ""
+        echo "API Information:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Current model: $current_model"
+        echo "API Key: ${GEMINI_API_KEY:0:10}...${GEMINI_API_KEY: -4}"
+        echo ""
+        echo "Rate Limits (Free Tier):"
+        echo "  • Requests per minute: ~15"
+        echo "  • Requests per day: ~1,500"
+        echo "  • Tokens per minute: ~32,000"
+        echo ""
+        echo "Note: Actual limits may vary by model and account type."
+        echo ""
+        _print_colored "$COLOR_CYAN" "Monitor your usage at:"
+        echo "https://aistudio.google.com/"
+        echo ""
+        _print_colored "$COLOR_YELLOW" "Tip: If you hit rate limits, try:"
+        echo "  • Waiting a few minutes between requests"
+        echo "  • Using 'ai-model' to switch to a lighter model"
+        echo "  • Checking usage dashboard for detailed metrics"
+        return 0
+    else
+        _print_colored "$COLOR_YELLOW" "⚠ Status: Unknown Response"
+        echo ""
+        echo "Received an unexpected response from the API."
+        echo ""
+        _print_colored "$COLOR_YELLOW" "Response details:"
+        echo "$test_response" | head -5
+        echo ""
+        echo "This might indicate:"
+        echo "  • API service issues"
+        echo "  • Network connectivity problems"
+        echo "  • API endpoint changes"
+        echo ""
+        return 1
+    fi
 }
 
 # Explain a command
@@ -710,7 +820,7 @@ ai-uninstall() {
     fi
     
     # Unset functions and aliases
-    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions ai-help ai-history ai-model ai-explain ai-multi ai-script _load_api_key _save_api_key _get_current_version _save_version _get_current_model _save_model _add_to_history _print_colored _offline_suggest
+    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions ai-help ai-history ai-model ai-usage ai-explain ai-multi ai-script _load_api_key _save_api_key _get_current_version _save_version _get_current_model _save_model _add_to_history _print_colored _offline_suggest
     unalias aicmd 2>/dev/null
     unalias reload 2>/dev/null
     unalias update 2>/dev/null
