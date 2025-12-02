@@ -4,7 +4,7 @@
 # Add this to your ~/.bashrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="1.1.0"
+VERSION="1.1.1"
 
 # Config file location
 AI_CONFIG_FILE="$HOME/.ai-command-config"
