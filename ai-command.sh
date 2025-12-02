@@ -18,7 +18,7 @@ GITHUB_REPO="ai-generate-cli"
 ai-reload() {
     echo "Reloading AI Command Generator from local file..."
     source ~/ai-command.sh
-    echo "✓ Successfully reloaded!"
+    echo "Successfully reloaded!"
 }
 
 # Get current installed version
@@ -69,7 +69,7 @@ ai-update() {
             curl -s -o ~/ai-command.sh "https://raw.githubusercontent.com/$GITHUB_OWNER/$GITHUB_REPO/main/ai-command.sh"
             chmod +x ~/ai-command.sh
             source ~/ai-command.sh
-            echo "✓ Successfully updated from main branch!"
+            echo "Successfully updated from main branch!"
             return 0
         fi
         
@@ -126,7 +126,7 @@ ai-update() {
     _save_version "$target_version"
     source ~/ai-command.sh
     
-    echo "✓ Successfully updated to version $target_version!"
+    echo "Successfully updated to version $target_version!"
 }
 
 # Show current version
@@ -215,19 +215,19 @@ ai-uninstall() {
     # Remove config file
     if [ -f "$AI_CONFIG_FILE" ]; then
         rm "$AI_CONFIG_FILE"
-        echo "✓ Removed config file"
+        echo "Removed config file"
     fi
     
     # Remove version file
     if [ -f "$AI_VERSION_FILE" ]; then
         rm "$AI_VERSION_FILE"
-        echo "✓ Removed version file"
+        echo "Removed version file"
     fi
     
     # Remove from bashrc
     if [ -f "$HOME/.bashrc" ]; then
         sed -i '/source.*ai-command\.sh/d' "$HOME/.bashrc"
-        echo "✓ Removed from ~/.bashrc"
+        echo "Removed from ~/.bashrc"
     fi
     
     # Unset functions and aliases
@@ -240,7 +240,7 @@ ai-uninstall() {
     # Remove the script file itself
     if [ -f "$HOME/ai-command.sh" ]; then
         rm "$HOME/ai-command.sh"
-        echo "✓ Removed script file"
+        echo "âœ“ Removed script file"
     fi
     
     echo ""
