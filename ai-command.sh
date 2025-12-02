@@ -112,16 +112,36 @@ ai-update() {
     echo ""
     echo "Downloading version $target_version..."
     
-    # Download from release
+    # Download from release with -L flag to follow redirects
     local download_url="https://github.com/$GITHUB_OWNER/$GITHUB_REPO/releases/download/$target_version/ai-command.sh"
-    local http_code=$(curl -s -o ~/ai-command.sh -w "%{http_code}" "$download_url")
+    local temp_file="/tmp/ai-command-download-$$.sh"
+    local http_code=$(curl -L -s -o "$temp_file" -w "%{http_code}" "$download_url")
     
     if [ "$http_code" != "200" ]; then
-        echo "Error: Version $target_version not found or download failed."
+        echo "Error: Version $target_version not found or download failed (HTTP $http_code)"
         echo "Use 'ai-list-versions' to see available versions."
+        echo ""
+        echo "Download URL attempted: $download_url"
+        rm -f "$temp_file"
         return 1
     fi
     
+    # Check if downloaded file is valid
+    if [ ! -s "$temp_file" ]; then
+        echo "Error: Downloaded file is empty"
+        rm -f "$temp_file"
+        return 1
+    fi
+    
+    # Check if it's a valid shell script
+    if ! head -n 1 "$temp_file" | grep -q "^#!/bin/bash"; then
+        echo "Error: Downloaded file is not a valid bash script"
+        rm -f "$temp_file"
+        return 1
+    fi
+    
+    # Move to final location
+    mv "$temp_file" ~/ai-command.sh
     chmod +x ~/ai-command.sh
     _save_version "$target_version"
     source ~/ai-command.sh
