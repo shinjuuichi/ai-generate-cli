@@ -1,0 +1,11 @@
+# Ignore all .sh files
+*.sh
+
+# Ignore all .md files
+*.md
+
+# Except ai-command.sh
+!ai-command.sh
+
+# Except README.md
+!README.md

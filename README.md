@@ -12,9 +12,27 @@ Generate shell commands from natural language using Google's Gemini API.
 
 ### 2. Install
 
+#### Option A: Install Latest Release (Recommended)
+
 ```bash
-# Download and install
-curl -o ~/ai-command.sh https://raw.githubusercontent.com/shinjuuichi/ai-generate-cli/main/ai-command.sh
+# Download latest release
+VERSION=$(curl -s https://api.github.com/repos/shinjuuichi/ai-generate-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh"
+chmod +x ~/ai-command.sh
+
+# Add to your ~/.bashrc
+echo "source ~/ai-command.sh" >> ~/.bashrc
+
+# Reload your shell
+source ~/.bashrc
+```
+
+#### Option B: Install Specific Version
+
+```bash
+# Replace v1.0.0 with your desired version
+VERSION="v1.0.0"
+curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh"
 chmod +x ~/ai-command.sh
 
 # Add to your ~/.bashrc
@@ -56,12 +74,16 @@ The tool will:
 ### Management Commands
 
 ```bash
-ai-change      # Change your API key
-ai-reload      # Reload local script
-ai-update      # Update to latest version from GitHub
-ai-uninstall   # Uninstall the tool
-reload         # Alias for ai-reload
-update         # Alias for ai-update
+ai-change            # Change your API key
+ai-reload            # Reload local script
+ai-update            # Update to latest version (interactive)
+ai-update <version>  # Install specific version (e.g., ai-update 1.0.0)
+ai-version           # Show current version
+ai-list-versions     # List all available versions
+ai-uninstall         # Uninstall the tool
+reload               # Alias for ai-reload
+update               # Alias for ai-update
+ai-ver               # Alias for ai-version
 ```
 
 ### Examples
@@ -100,8 +122,12 @@ aicmd list all jpg images
 
 ## Features
 
-- 🤖 Natural language to shell command conversion
-- 💾 Flexible API key storage (permanent or session-based)
+- Natural language to shell command conversion
+- Flexible API key storage (permanent or session-based)
+- Version management with GitHub releases
+- Easy upgrade/downgrade between versions (e.g., 1.0.0, 1.1.0)
+- List all available versions
+- Install specific version directly
 - Preview command before execution
 - Safe confirmation prompt
 - Works with bash and other shells
@@ -192,7 +218,34 @@ update
 ai-update
 ```
 
-This will automatically download and reload the latest version from GitHub.
+This will show you available versions and let you choose:
+
+- Update to latest version
+- Choose specific version
+- Cancel
+
+### Want to install a specific version or downgrade?
+
+```bash
+# Interactive selection
+ai-update
+
+# Direct version install
+ai-update 1.0.0
+# or
+ai-update v1.0.0
+
+# List all available versions first
+ai-list-versions
+```
+
+### Want to check your current version?
+
+```bash
+ai-version
+# or
+ai-ver
+```
 
 ## Requirements
 
