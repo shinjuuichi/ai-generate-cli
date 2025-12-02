@@ -173,11 +173,16 @@ ai-update() {
         echo "Latest version available: $latest_version"
         echo ""
         echo "Options:"
-        echo "1) Update to latest version ($latest_version)"
+        echo "1) Update to latest version ($latest_version) [default]"
         echo "2) Choose specific version"
         echo "3) Cancel"
-        read -p "Choose option (1/2/3): " -n 1 -r update_option
+        read -p "Choose option (1/2/3) [default: 1]: " -n 1 -r update_option
         echo ""
+        
+        # Default to option 1 if Enter is pressed
+        if [[ -z $update_option ]]; then
+            update_option="1"
+        fi
         
         if [[ $update_option == "1" ]]; then
             target_version="$latest_version"
@@ -632,10 +637,15 @@ ai-change() {
     
     echo ""
     echo "How would you like to save this key?"
-    echo "1) Save permanently (recommended)"
+    echo "1) Save permanently (recommended) [default]"
     echo "2) Use for this session only"
-    read -p "Choose option (1/2): " -n 1 -r save_option
+    read -p "Choose option (1/2) [default: 1]: " -n 1 -r save_option
     echo ""
+    
+    # Default to option 1 if Enter is pressed
+    if [[ -z $save_option ]]; then
+        save_option="1"
+    fi
     
     if [[ $save_option == "1" ]]; then
         _save_api_key "$new_key"
@@ -769,10 +779,15 @@ ai() {
         
         echo ""
         echo "How would you like to save this key?"
-        echo "1) Save permanently (recommended)"
+        echo "1) Save permanently (recommended) [default]"
         echo "2) Use for this session only"
-        read -p "Choose option (1/2): " -n 1 -r save_option
+        read -p "Choose option (1/2) [default: 1]: " -n 1 -r save_option
         echo ""
+        
+        # Default to option 1 if Enter is pressed
+        if [[ -z $save_option ]]; then
+            save_option="1"
+        fi
         
         if [[ $save_option == "1" ]]; then
             _save_api_key "$api_key"
@@ -880,9 +895,9 @@ Rules:
         eval "$command"
     else
         # Ask user if they want to execute it
-        read -p "Execute this command? (y/n): " -n 1 -r
+        read -p "Execute this command? (Y/n) [default: Y]: " -n 1 -r
         echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [[ -z $REPLY ]] || [[ $REPLY =~ ^[Yy]$ ]]; then
             eval "$command"
         else
             echo "Command not executed. You can copy it from above."
