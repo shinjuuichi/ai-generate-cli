@@ -4,7 +4,7 @@
 # Add this to your ~/.bashrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="1.0.1"
+VERSION="1.0.2"
 
 # Config file location
 AI_CONFIG_FILE="$HOME/.ai-command-config"
@@ -240,7 +240,7 @@ ai-uninstall() {
     # Remove the script file itself
     if [ -f "$HOME/ai-command.sh" ]; then
         rm "$HOME/ai-command.sh"
-        echo "âœ“ Removed script file"
+        echo "Removed script file"
     fi
     
     echo ""
@@ -332,6 +332,25 @@ Rules:
                 \"maxOutputTokens\": 2000
             }
         }")
+
+    # Check for API key error first
+    if echo "$response" | grep -q "API_KEY_INVALID\|API key not valid"; then
+        echo "Error: Invalid API key"
+        echo ""
+        echo "Your API key is not valid or has expired."
+        echo "Please update your API key to continue."
+        echo ""
+        read -p "Would you like to change your API key now? (y/n): " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            ai-change
+            echo ""
+            echo "Please try your command again."
+        else
+            echo "You can change your API key anytime using: ai-change"
+        fi
+        return 1
+    fi
 
     # Extract the command from the response
     local command=$(echo "$response" | grep -o '"text": *"[^"]*"' | head -1 | sed 's/"text": *"\(.*\)"/\1/' | sed 's/\\n/ /g')

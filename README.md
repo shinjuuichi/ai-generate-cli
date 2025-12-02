@@ -18,8 +18,7 @@ Generate shell commands from natural language using Google's Gemini API.
 bash -c 'VERSION=$(curl -s https://api.github.com/repos/shinjuuichi/ai-generate-cli/releases/latest | grep "tag_name" | sed -E "s/.*\"([^\"]+)\".*/\1/") && \
 curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh" && \
 chmod +x ~/ai-command.sh && \
-echo "source ~/ai-command.sh" >> ~/.bashrc && \
-source ~/.bashrc'
+echo "source ~/ai-command.sh" >> ~/.bashrc' && source ~/.bashrc && source ~/ai-command.sh
 ```
 
 #### Install Specific Version
@@ -30,8 +29,7 @@ View all available versions: [Releases](https://github.com/shinjuuichi/ai-genera
 # You can replace v1.0.0 with any version tag you want to install
 VERSION="v1.0.0" bash -c 'curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh" && \
 chmod +x ~/ai-command.sh && \
-echo "source ~/ai-command.sh" >> ~/.bashrc && \
-source ~/.bashrc'
+echo "source ~/ai-command.sh" >> ~/.bashrc' && source ~/.bashrc && source ~/ai-command.sh
 ```
 
 ### 3. First Use
