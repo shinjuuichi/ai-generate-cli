@@ -3,8 +3,16 @@
 # AI Command Generator using Gemini API
 # Add this to your ~/.bashrc or source it: source ~/path/to/ai-command.sh
 
+# Version
+VERSION="1.0.0"
+
 # Config file location
 AI_CONFIG_FILE="$HOME/.ai-command-config"
+AI_VERSION_FILE="$HOME/.ai-command-version"
+
+# GitHub repository
+GITHUB_OWNER="shinjuuichi"
+GITHUB_REPO="ai-generate-cli"
 
 # Reload shell function (reload local file)
 ai-reload() {
@@ -13,18 +21,131 @@ ai-reload() {
     echo "✓ Successfully reloaded!"
 }
 
-# Update function (fetch latest version from GitHub)
+# Get current installed version
+_get_current_version() {
+    if [ -f "$AI_VERSION_FILE" ]; then
+        cat "$AI_VERSION_FILE"
+    else
+        echo "unknown"
+    fi
+}
+
+# Save version to file
+_save_version() {
+    local version="$1"
+    echo "$version" > "$AI_VERSION_FILE"
+}
+
+# List available versions from GitHub releases
+ai-list-versions() {
+    echo "Fetching available versions from GitHub..."
+    local releases=$(curl -s "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases")
+    
+    if [ -z "$releases" ] || [ "$releases" = "[]" ]; then
+        echo "No releases found."
+        return 1
+    fi
+    
+    echo ""
+    echo "Available versions:"
+    echo "=================="
+    echo "$releases" | grep -o '"tag_name": *"[^"]*"' | sed 's/"tag_name": *"\(.*\)"/\1/' | nl
+}
+
+# Update function (fetch specific version or latest from GitHub releases)
 ai-update() {
-    echo "Updating AI Command Generator from GitHub..."
-    curl -s -o ~/ai-command.sh https://raw.githubusercontent.com/shinjuuichi/ai-generate-cli/main/ai-command.sh
+    local target_version="$1"
+    local current_version=$(_get_current_version)
+    
+    echo "Current version: $current_version"
+    echo ""
+    
+    if [ -z "$target_version" ]; then
+        echo "Fetching available versions..."
+        local releases=$(curl -s "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases")
+        
+        if [ -z "$releases" ] || [ "$releases" = "[]" ]; then
+            echo "No releases found. Trying main branch..."
+            curl -s -o ~/ai-command.sh "https://raw.githubusercontent.com/$GITHUB_OWNER/$GITHUB_REPO/main/ai-command.sh"
+            chmod +x ~/ai-command.sh
+            source ~/ai-command.sh
+            echo "✓ Successfully updated from main branch!"
+            return 0
+        fi
+        
+        # Get latest release
+        local latest_version=$(echo "$releases" | grep -o '"tag_name": *"[^"]*"' | head -1 | sed 's/"tag_name": *"\(.*\)"/\1/')
+        
+        echo "Latest version available: $latest_version"
+        echo ""
+        echo "Options:"
+        echo "1) Update to latest version ($latest_version)"
+        echo "2) Choose specific version"
+        echo "3) Cancel"
+        read -p "Choose option (1/2/3): " -n 1 -r update_option
+        echo ""
+        
+        if [[ $update_option == "1" ]]; then
+            target_version="$latest_version"
+        elif [[ $update_option == "2" ]]; then
+            echo ""
+            echo "Available versions:"
+            echo "$releases" | grep -o '"tag_name": *"[^"]*"' | sed 's/"tag_name": *"\(.*\)"/\1/' | nl
+            echo ""
+            read -p "Enter version (e.g., v1.0.0 or 1.0.0): " target_version
+            
+            # Add 'v' prefix if not present
+            if [[ ! "$target_version" =~ ^v ]]; then
+                target_version="v$target_version"
+            fi
+        else
+            echo "Update cancelled."
+            return 0
+        fi
+    else
+        # Add 'v' prefix if not present
+        if [[ ! "$target_version" =~ ^v ]]; then
+            target_version="v$target_version"
+        fi
+    fi
+    
+    echo ""
+    echo "Downloading version $target_version..."
+    
+    # Download from release
+    local download_url="https://github.com/$GITHUB_OWNER/$GITHUB_REPO/releases/download/$target_version/ai-command.sh"
+    local http_code=$(curl -s -o ~/ai-command.sh -w "%{http_code}" "$download_url")
+    
+    if [ "$http_code" != "200" ]; then
+        echo "Error: Version $target_version not found or download failed."
+        echo "Use 'ai-list-versions' to see available versions."
+        return 1
+    fi
+    
     chmod +x ~/ai-command.sh
+    _save_version "$target_version"
     source ~/ai-command.sh
-    echo "✓ Successfully updated to latest version!"
+    
+    echo "✓ Successfully updated to version $target_version!"
+}
+
+# Show current version
+ai-version() {
+    local current_version=$(_get_current_version)
+    echo "AI Command Generator"
+    echo "===================="
+    echo "Current version: $current_version"
+    echo "Script version: $VERSION"
+    echo ""
+    echo "Use 'ai-list-versions' to see all available versions"
+    echo "Use 'ai-update' to update or change version"
+    echo "Use 'ai-update <version>' to install specific version (e.g., ai-update 1.0.0)"
 }
 
 # Aliases for convenience
 alias reload='ai-reload'
 alias update='ai-update'
+alias ai-ver='ai-version'
 
 # Load API key from config file
 _load_api_key() {
@@ -95,6 +216,12 @@ ai-uninstall() {
         echo "✓ Removed config file"
     fi
     
+    # Remove version file
+    if [ -f "$AI_VERSION_FILE" ]; then
+        rm "$AI_VERSION_FILE"
+        echo "✓ Removed version file"
+    fi
+    
     # Remove from bashrc
     if [ -f "$HOME/.bashrc" ]; then
         sed -i '/source.*ai-command\.sh/d' "$HOME/.bashrc"
@@ -102,10 +229,11 @@ ai-uninstall() {
     fi
     
     # Unset functions and aliases
-    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update _load_api_key _save_api_key
+    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions _load_api_key _save_api_key _get_current_version _save_version
     unalias aicmd 2>/dev/null
     unalias reload 2>/dev/null
     unalias update 2>/dev/null
+    unalias ai-ver 2>/dev/null
     
     echo ""
     echo "AI Command Generator uninstalled successfully!"
@@ -153,10 +281,13 @@ ai() {
         echo "Example: ai list all pdf files in current directory"
         echo ""
         echo "Other commands:"
-        echo "  ai-change     - Change API key"
-        echo "  ai-reload     - Reload local script"
-        echo "  ai-update     - Update to latest version from GitHub"
-        echo "  ai-uninstall  - Uninstall this tool"
+        echo "  ai-change          - Change API key"
+        echo "  ai-reload          - Reload local script"
+        echo "  ai-update          - Update to latest version or choose specific version"
+        echo "  ai-update <ver>    - Install specific version (e.g., ai-update 1.0.0)"
+        echo "  ai-version         - Show current version"
+        echo "  ai-list-versions   - List all available versions"
+        echo "  ai-uninstall       - Uninstall this tool"
         return 1
     fi
 
