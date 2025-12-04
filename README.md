@@ -189,6 +189,66 @@ Available models:
 - `gemini-2.0-flash` - Second generation workhorse with 1M token context window
 - `gemini-2.0-flash-lite` - Second generation fast model with 1M token context window
 
+### 🧠 Context Management
+
+AI automatically learns from your commands - no manual setup needed!
+
+```bash
+# Just use AI normally - it learns automatically
+ai install hydra
+ai brute force ssh                    # AI remembers you're working with hydra
+ai check wordlist                     # Still in hydra context
+ai save results                       # Knows what you're doing
+
+# AI learns from errors too!
+ai configure hydra                    # ERROR: command fails
+ai fix it                             # AI remembers the error and suggests a fix
+
+# Start fresh topic when switching tasks
+ai-new
+ai install docker                     # Fresh context, focuses on docker
+ai list containers                    # AI knows you're in docker context now
+
+# View directory structure (helps AI understand your project)
+ai-tree           # Shows 2 levels deep
+ai-tree 3         # Shows 3 levels deep
+```
+
+**How it works:**
+
+- **Automatic Learning**: AI remembers your last 10 commands with their results (success/errors)
+- **Smart Context**: Each command builds on previous ones, including what worked and what failed
+- **Error Awareness**: If a command fails, AI knows and can suggest fixes automatically
+- **Easy Reset**: Use `ai-new` when switching to a different topic or tool
+- **Directory Awareness**: First time you use `ai`, it asks if you want to use directory structure for better context
+- **No Manual Setup**: Just use `ai` normally, context is automatic!
+
+**Example workflow:**
+
+```bash
+# Penetration testing session
+ai install hydra                  # AI learns: working with hydra
+ai brute force ssh port 22        # Context: hydra + ssh
+ai use rockyou wordlist           # Context: hydra + wordlists
+ai save output to file            # Context: hydra + results
+
+# If a command fails, AI learns and helps fix it
+ai install hydra                  # ERROR: package not found
+ai fix the error                  # AI knows about the error and suggests: apt update && apt install hydra
+
+# Switch to different task
+ai-new                            # Clear old context
+ai create docker container        # New context starts
+ai mount volume                   # Remembers docker context
+```
+
+**First-time setup:**
+When you first use `ai`, you'll be asked:
+
+> "Would you like AI to use your directory structure for better context?"
+
+This helps AI understand your project structure and provide more relevant commands.
+
 ### 📊 API Usage Check
 
 Monitor your API key status and rate limits:
@@ -311,11 +371,14 @@ aihelp  # Show help
 - **Zsh Support** - Full compatibility with Zsh (Kali Linux, macOS default)
 - **Shell Auto-detection** - Automatically detects and adapts to your shell
 - Improved installation for both Bash and Zsh users
+- **Automatic Context Learning** - AI learns from commands AND their results (success/errors)
+- **Error-Aware AI** - AI remembers failures and can suggest fixes
 - **Command History Tracking** - Never lose a generated command
 - **Auto-run Mode** - Skip confirmation with `-y` flag
 - **Script Generation** - Create full scripts, not just one-liners
 - **Command Explanation** - Understand risks before running
 - **Multiple Options** - See different approaches to the same task
+- **Directory Tree Integration** - AI understands your project structure
 - **Offline Fallback** - Basic suggestions when API is down
 - **Pretty Output** - Color-coded display with `--pretty`
 - **Model Selection** - Choose the right model for your needs
@@ -353,7 +416,8 @@ The tool offers flexible options for storing your API key:
 
 ### Option 1: Permanent Storage (Recommended)
 
-- Saved in `~/.ai-command-config`
+- Saved in `~/.ai-command/config`
+- All config files organized in `~/.ai-command/` directory
 - Encrypted with proper file permissions (600)
 - Automatically loaded on each use
 - Best for regular use
@@ -384,6 +448,8 @@ This will:
 - Remove your saved API key
 - Remove command history
 - Remove model configuration
+- Remove context data
+- Remove the config directory (`~/.ai-command/`)
 - Remove the script from your ~/.bashrc
 - Clean up all functions and aliases
 
@@ -515,6 +581,8 @@ ai-ver
 | `ai-multi <desc>`    | Generate 3 command variants           |
 | `ai-history`         | View command history                  |
 | `ai-model`           | Manage Gemini models                  |
+| `ai-new`             | Clear context, start fresh            |
+| `ai-tree`            | Show directory structure              |
 
 ### Management Commands
 

@@ -16,11 +16,20 @@ else
     CURRENT_SHELL="unknown"
 fi
 
-# Config file location
-AI_CONFIG_FILE="$HOME/.ai-command-config"
-AI_VERSION_FILE="$HOME/.ai-command-version"
-AI_HISTORY_FILE="$HOME/.ai-command-history"
-AI_MODEL_FILE="$HOME/.ai-command-model"
+# Config directory and files
+AI_CONFIG_DIR="$HOME/.ai-command"
+AI_CONFIG_FILE="$AI_CONFIG_DIR/config"
+AI_VERSION_FILE="$AI_CONFIG_DIR/version"
+AI_HISTORY_FILE="$AI_CONFIG_DIR/history"
+AI_MODEL_FILE="$AI_CONFIG_DIR/model"
+AI_CONTEXT_FILE="$AI_CONFIG_DIR/context"
+AI_CONTEXT_HISTORY_FILE="$AI_CONFIG_DIR/context-history"
+AI_USE_TREE_FILE="$AI_CONFIG_DIR/use-tree"
+
+# Create config directory if it doesn't exist
+if [ ! -d "$AI_CONFIG_DIR" ]; then
+    mkdir -p "$AI_CONFIG_DIR"
+fi
 
 # Default Gemini model
 DEFAULT_MODEL="gemini-2.5-flash"
@@ -136,6 +145,76 @@ _add_to_history() {
     local command="$1"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] $command" >> "$AI_HISTORY_FILE"
+}
+
+# Get current context (last 5 commands with results)
+_get_context() {
+    if [ -f "$AI_CONTEXT_HISTORY_FILE" ]; then
+        tail -10 "$AI_CONTEXT_HISTORY_FILE" | paste -sd "; " -
+    else
+        echo ""
+    fi
+}
+
+# Add to context history with result
+_add_to_context() {
+    local description="$1"
+    local result="$2"
+    if [ -n "$result" ]; then
+        echo "$description | Result: $result" >> "$AI_CONTEXT_HISTORY_FILE"
+    else
+        echo "$description" >> "$AI_CONTEXT_HISTORY_FILE"
+    fi
+}
+
+# Add command execution result to context
+_add_execution_result() {
+    local command="$1"
+    local exit_code="$2"
+    local output="$3"
+    
+    if [ "$exit_code" -eq 0 ]; then
+        echo "Executed: $command | SUCCESS" >> "$AI_CONTEXT_HISTORY_FILE"
+    else
+        # Save error for AI to learn from
+        local error_summary=$(echo "$output" | head -3 | tr '\n' ' ')
+        echo "Executed: $command | ERROR (exit $exit_code): $error_summary" >> "$AI_CONTEXT_HISTORY_FILE"
+    fi
+}
+
+# Clear context
+_clear_context() {
+    if [ -f "$AI_CONTEXT_HISTORY_FILE" ]; then
+        rm "$AI_CONTEXT_HISTORY_FILE"
+    fi
+    if [ -f "$AI_CONTEXT_FILE" ]; then
+        rm "$AI_CONTEXT_FILE"
+    fi
+}
+
+# Check if should use directory tree
+_should_use_tree() {
+    if [ -f "$AI_USE_TREE_FILE" ]; then
+        cat "$AI_USE_TREE_FILE"
+    else
+        echo ""
+    fi
+}
+
+# Save tree preference
+_save_tree_preference() {
+    local use_tree="$1"
+    echo "$use_tree" > "$AI_USE_TREE_FILE"
+}
+
+# Get directory tree (limited depth for context)
+_get_directory_tree() {
+    local max_depth=${1:-2}
+    if command -v tree &> /dev/null; then
+        tree -L "$max_depth" -a -I '.git|node_modules|venv|__pycache__|*.pyc|.env' 2>/dev/null || echo "Directory tree not available"
+    else
+        find . -maxdepth "$max_depth" -not -path '*/\.*' -not -path '*/node_modules/*' -not -path '*/venv/*' 2>/dev/null | head -50 || echo "Directory listing not available"
+    fi
 }
 
 # Colorized output function
@@ -343,6 +422,13 @@ ai-help() {
     echo "  ai-history -n <number>        Show last N commands"
     echo "  ai-history --clear            Clear history"
     echo ""
+    echo "CONTEXT MANAGEMENT:"
+    echo "  ai-new                        Clear context and start fresh topic"
+    echo "  ai-tree [depth]               Show directory structure"
+    echo ""
+    echo "  Note: AI automatically learns from your commands!"
+    echo "  Use 'ai-new' when switching to a different topic."
+    echo ""
     echo "MODEL MANAGEMENT:"
     echo "  ai-model                      Show current model"
     echo "  ai-model ls                   List available Gemini models"
@@ -367,6 +453,14 @@ ai-help() {
     echo "  ai -y delete old logs"
     echo "  ai-explain \"rm -rf /var/log/*\""
     echo "  ai-script backup home directory daily"
+    echo ""
+    echo "CONTEXT EXAMPLES (automatic learning):"
+    echo "  ai install hydra                          # AI learns about hydra"
+    echo "  ai brute force ssh                        # AI remembers context"
+    echo "  ai wordlist for passwords                 # Still knows hydra"
+    echo "  ai-new                                    # Start fresh topic"
+    echo "  ai install nmap                           # New context begins"
+    echo "  ai-tree 3                                 # Show directory structure"
     echo "  ai-multi list large files"
 }
 
@@ -451,6 +545,34 @@ ai-model() {
     
     _save_model "$new_model"
     echo "Model changed to: $new_model"
+}
+
+# Start new context (clear old context)
+ai-new() {
+    local old_context=$(_get_context)
+    _clear_context
+    
+    if [ -z "$old_context" ]; then
+        _print_colored "$COLOR_GREEN" "✓ Starting fresh session"
+    else
+        _print_colored "$COLOR_YELLOW" "Previous context cleared"
+        _print_colored "$COLOR_GREEN" "✓ Starting fresh session"
+    fi
+    
+    echo ""
+    echo "AI will learn from your new commands automatically."
+    echo "Use 'ai-new' again when you want to start a different topic."
+}
+
+# Show directory tree for context
+ai-tree() {
+    local depth=${1:-2}
+    echo "Directory structure (depth: $depth):"
+    echo "====================================="
+    _get_directory_tree "$depth"
+    echo ""
+    echo "Use 'ai-tree <depth>' to see more levels"
+    echo "This structure helps AI understand your project"
 }
 
 # Check API usage and quota limits
@@ -794,6 +916,7 @@ _load_api_key() {
 # Save API key to config file
 _save_api_key() {
     local api_key="$1"
+    mkdir -p "$AI_CONFIG_DIR"
     echo "export GEMINI_API_KEY='$api_key'" > "$AI_CONFIG_FILE"
     chmod 600 "$AI_CONFIG_FILE"
     echo "API key saved permanently to $AI_CONFIG_FILE"
@@ -839,10 +962,9 @@ ai-uninstall() {
     echo "Uninstall AI Command Generator"
     echo "==============================="
     echo "This will:"
-    echo "  - Remove the saved API key"
-    echo "  - Remove the version file"
-    echo "  - Remove command history"
-    echo "  - Remove model configuration"
+    echo "  - Remove all configuration files"
+    echo "  - Remove command history and context"
+    echo "  - Remove the config directory (~/.ai-command/)"
     echo "  - Remove the script file (~/ai-command.sh)"
     echo "  - Remove lines from ~/.bashrc and ~/.zshrc (if present)"
     echo ""
@@ -854,28 +976,10 @@ ai-uninstall() {
         return 0
     fi
     
-    # Remove config file
-    if [ -f "$AI_CONFIG_FILE" ]; then
-        rm "$AI_CONFIG_FILE"
-        echo "Removed config file"
-    fi
-    
-    # Remove version file
-    if [ -f "$AI_VERSION_FILE" ]; then
-        rm "$AI_VERSION_FILE"
-        echo "Removed version file"
-    fi
-    
-    # Remove history file
-    if [ -f "$AI_HISTORY_FILE" ]; then
-        rm "$AI_HISTORY_FILE"
-        echo "Removed history file"
-    fi
-    
-    # Remove model file
-    if [ -f "$AI_MODEL_FILE" ]; then
-        rm "$AI_MODEL_FILE"
-        echo "Removed model file"
+    # Remove entire config directory
+    if [ -d "$AI_CONFIG_DIR" ]; then
+        rm -rf "$AI_CONFIG_DIR"
+        echo "Removed config directory: $AI_CONFIG_DIR"
     fi
     
     # Remove from bashrc
@@ -891,7 +995,7 @@ ai-uninstall() {
     fi
     
     # Unset functions and aliases
-    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions ai-help ai-history ai-model ai-usage ai-explain ai-multi ai-script _load_api_key _save_api_key _get_current_version _save_version _get_current_model _save_model _add_to_history _print_colored _offline_suggest
+    unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions ai-help ai-history ai-model ai-usage ai-explain ai-multi ai-script ai-new ai-tree _load_api_key _save_api_key _get_current_version _save_version _get_current_model _save_model _add_to_history _print_colored _offline_suggest _get_context _add_to_context _add_execution_result _clear_context _should_use_tree _save_tree_preference _get_directory_tree
     unalias aicmd 2>/dev/null
     unalias reload 2>/dev/null
     unalias update 2>/dev/null
@@ -1004,9 +1108,52 @@ ai() {
     local shell_type=$(basename "$SHELL")
     local os_type=$(uname -s)
     local current_model=$(_get_current_model)
+    local current_context=$(_get_context)
+    local use_tree=$(_should_use_tree)
+    
+    # First time use - ask about directory tree
+    if [ -z "$use_tree" ]; then
+        echo ""
+        _print_colored "$COLOR_CYAN" "First time setup:"
+        echo "Would you like AI to use your directory structure for better context?"
+        echo "This helps AI understand your project and provide more relevant commands."
+        echo ""
+        _read_single_char "Use directory structure? (Y/n) [default: Y]: " tree_reply
+        local tree_reply_lower=$(echo "$tree_reply" | tr '[:upper:]' '[:lower:]')
+        
+        if [[ -z "$tree_reply" ]] || [[ "$tree_reply_lower" == "y" ]] || [[ "$tree_reply" == $'\n' ]]; then
+            _save_tree_preference "yes"
+            use_tree="yes"
+            echo "✓ Directory structure enabled"
+        else
+            _save_tree_preference "no"
+            use_tree="no"
+            echo "✓ Directory structure disabled"
+        fi
+        echo ""
+    fi
+    
+    # Build context-aware prompt
+    local context_hint=""
+    if [ -n "$current_context" ]; then
+        context_hint="\n\nPrevious commands and their results: $current_context"
+        context_hint="$context_hint\nUse this context to understand what the user is working on, what succeeded, what failed, and provide relevant commands. If previous commands had errors, suggest fixes."
+    fi
+    
+    # Add directory tree if enabled
+    local tree_hint=""
+    if [ "$use_tree" = "yes" ]; then
+        local dir_structure=$(_get_directory_tree 2)
+        if [ -n "$dir_structure" ] && [ "$dir_structure" != "Directory tree not available" ]; then
+            tree_hint="\n\nCurrent directory structure:\n$dir_structure"
+        fi
+    fi
+    
+    # Save current description to context
+    _add_to_context "$description"
     
     # Create the prompt for Gemini
-    local prompt="You are a shell command expert. Generate ONLY the shell command for $shell_type on $os_type that does the following: $description
+    local prompt="You are a shell command expert. Generate ONLY the shell command for $shell_type on $os_type that does the following: $description${context_hint}${tree_hint}
 
 Rules:
 - Return ONLY the command, no explanations
@@ -1081,14 +1228,28 @@ Rules:
     # Execute based on auto_run flag
     if [ "$auto_run" = true ]; then
         _print_colored "$COLOR_GREEN" "Executing automatically..."
-        eval "$command"
+        # Capture output and exit code
+        local output
+        local exit_code
+        output=$(eval "$command" 2>&1)
+        exit_code=$?
+        echo "$output"
+        # Save execution result to context
+        _add_execution_result "$command" "$exit_code" "$output"
     else
         # Ask user if they want to execute it
         _read_single_char "Execute this command? (Y/n) [default: Y]: " REPLY
         # Default to Yes if Enter is pressed or empty, case-insensitive Y
         local reply_lower=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
         if [[ -z "$REPLY" ]] || [[ "$REPLY" == $'\n' ]] || [[ "$REPLY" == "" ]] || [[ "$reply_lower" == "y" ]]; then
-            eval "$command"
+            # Capture output and exit code
+            local output
+            local exit_code
+            output=$(eval "$command" 2>&1)
+            exit_code=$?
+            echo "$output"
+            # Save execution result to context
+            _add_execution_result "$command" "$exit_code" "$output"
         else
             echo "Command not executed. You can copy it from above."
         fi
