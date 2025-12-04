@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="1.2.0"
+VERSION="2.0.0"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
