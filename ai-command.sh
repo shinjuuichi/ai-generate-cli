@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="4.0.0"
+VERSION="5.0.0"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
@@ -326,6 +326,22 @@ _print_colored() {
     else
         echo "$text"
     fi
+}
+
+# Escape string for JSON
+_escape_json() {
+    local string="$1"
+    # Replace backslash first (must be first to avoid double-escaping)
+    string="${string//\\/\\\\}"
+    # Replace double quotes
+    string="${string//\"/\\\"}"
+    # Replace newlines
+    string="${string//$'\n'/\\n}"
+    # Replace tabs
+    string="${string//$'\t'/\\t}"
+    # Replace carriage returns
+    string="${string//$'\r'/\\r}"
+    echo "$string"
 }
 
 # Offline fallback suggestions
@@ -816,6 +832,9 @@ ai-explain() {
 
 Command: $command_to_explain"
 
+    # Escape prompt for JSON
+    local escaped_prompt=$(_escape_json "$prompt")
+
     _print_colored "$COLOR_CYAN" "Analyzing command..."
     echo ""
     
@@ -825,7 +844,7 @@ Command: $command_to_explain"
         -d "{
             \"contents\": [{
                 \"parts\": [{
-                    \"text\": \"$prompt\"
+                    \"text\": \"$escaped_prompt\"
                 }]
             }],
             \"generationConfig\": {
@@ -879,6 +898,9 @@ Option 3: [command]
 Each command should use a different approach or tool.
 Keep commands concise and on one line each."
 
+    # Escape prompt for JSON
+    local escaped_prompt=$(_escape_json "$prompt")
+
     _print_colored "$COLOR_CYAN" "Generating multiple options..."
     echo ""
     
@@ -888,7 +910,7 @@ Keep commands concise and on one line each."
         -d "{
             \"contents\": [{
                 \"parts\": [{
-                    \"text\": \"$prompt\"
+                    \"text\": \"$escaped_prompt\"
                 }]
             }],
             \"generationConfig\": {
@@ -954,6 +976,9 @@ Requirements:
 - Use best practices
 - Return ONLY the script code, no explanations outside the script"
 
+    # Escape prompt for JSON
+    local escaped_prompt=$(_escape_json "$prompt")
+
     _print_colored "$COLOR_CYAN" "Generating script..."
     echo ""
     
@@ -963,7 +988,7 @@ Requirements:
         -d "{
             \"contents\": [{
                 \"parts\": [{
-                    \"text\": \"$prompt\"
+                    \"text\": \"$escaped_prompt\"
                 }]
             }],
             \"generationConfig\": {
@@ -1269,6 +1294,9 @@ Rules:
 - Make it a single line command when possible
 - Use common, safe commands"
 
+    # Escape prompt for JSON
+    local escaped_prompt=$(_escape_json "$prompt")
+
     # Get max tokens setting
     local max_tokens=$(_get_max_tokens)
 
@@ -1279,7 +1307,7 @@ Rules:
         -d "{
             \"contents\": [{
                 \"parts\": [{
-                    \"text\": \"$prompt\"
+                    \"text\": \"$escaped_prompt\"
                 }]
             }],
             \"generationConfig\": {
