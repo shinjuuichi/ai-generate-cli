@@ -1,10 +1,20 @@
 #!/bin/bash
 
 # AI Command Generator using Gemini API
-# Add this to your ~/.bashrc or source it: source ~/path/to/ai-command.sh
+# Compatible with Bash and Zsh
+# Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="1.1.2"
+VERSION="1.2.0"
+
+# Detect shell type
+if [ -n "$BASH_VERSION" ]; then
+    CURRENT_SHELL="bash"
+elif [ -n "$ZSH_VERSION" ]; then
+    CURRENT_SHELL="zsh"
+else
+    CURRENT_SHELL="unknown"
+fi
 
 # Config file location
 AI_CONFIG_FILE="$HOME/.ai-command-config"
@@ -39,8 +49,56 @@ GITHUB_REPO="ai-generate-cli"
 # Reload shell function (reload local file)
 ai-reload() {
     echo "Reloading AI Command Generator from local file..."
-    source ~/ai-command.sh
+    if [ "$CURRENT_SHELL" = "zsh" ]; then
+        source ~/ai-command.sh 2>/dev/null || . ~/ai-command.sh
+    else
+        source ~/ai-command.sh
+    fi
     echo "Successfully reloaded!"
+}
+
+# Shell-compatible read function for single character input
+_read_single_char() {
+    local prompt="$1"
+    local varname="$2"
+    
+    if [ "$CURRENT_SHELL" = "zsh" ]; then
+        # Zsh doesn't support read -n, use read -k instead
+        echo -n "$prompt"
+        read -k 1 "$varname"
+        echo
+    else
+        # Bash supports read -n
+        read -p "$prompt" -n 1 -r "$varname"
+        echo
+    fi
+}
+
+# Shell-compatible read function for regular input
+_read_input() {
+    local prompt="$1"
+    local varname="$2"
+    local silent="$3"
+    
+    if [ "$silent" = "true" ]; then
+        # Silent mode (for passwords)
+        if [ "$CURRENT_SHELL" = "zsh" ]; then
+            echo -n "$prompt"
+            read -s "$varname"
+            echo
+        else
+            read -p "$prompt" -s "$varname"
+            echo
+        fi
+    else
+        # Normal mode
+        if [ "$CURRENT_SHELL" = "zsh" ]; then
+            echo -n "$prompt"
+            read "$varname"
+        else
+            read -p "$prompt" "$varname"
+        fi
+    fi
 }
 
 # Get current installed version
@@ -176,8 +234,7 @@ ai-update() {
         echo "1) Update to latest version ($latest_version) [default]"
         echo "2) Choose specific version"
         echo "3) Cancel"
-        read -p "Choose option (1/2/3) [default: 1]: " -n 1 -r update_option
-        echo ""
+        _read_single_char "Choose option (1/2/3) [default: 1]: " update_option
         
         # Default to option 1 if Enter is pressed
         if [[ -z $update_option ]]; then
@@ -191,7 +248,7 @@ ai-update() {
             echo "Available versions:"
             echo "$releases" | grep -o '"tag_name": *"[^"]*"' | sed 's/"tag_name": *"\(.*\)"/\1/' | nl
             echo ""
-            read -p "Enter version (e.g., v1.0.0 or 1.0.0): " target_version
+            _read_input "Enter version (e.g., v1.0.0 or 1.0.0): " target_version false
             
             # Add 'v' prefix if not present
             if [[ ! "$target_version" =~ ^v ]]; then
@@ -322,8 +379,7 @@ ai-history() {
     
     case "$1" in
         --clear)
-            read -p "Clear all command history? (y/n): " -n 1 -r
-            echo ""
+            _read_single_char "Clear all command history? (y/n): " REPLY
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 rm "$AI_HISTORY_FILE"
                 echo "Command history cleared."
@@ -461,7 +517,14 @@ ai-usage() {
         echo "  2. Check your usage at: https://aistudio.google.com/"
         echo "  3. Consider upgrading to a paid plan"
         echo "  4. Switch to a different model with: ai-model ls"
+        echo "  5. Change to a different API key"
         echo ""
+        _read_single_char "Would you like to change your API key now? (y/n): " REPLY
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            ai-change
+            echo ""
+            echo "Please try your command again with the new API key."
+        fi
         return 1
     elif echo "$test_response" | grep -q '"text"'; then
         _print_colored "$COLOR_GREEN" "✓ Status: API Key Active & Working"
@@ -624,7 +687,7 @@ Keep commands concise and on one line each."
     
     echo "$options"
     echo ""
-    read -p "Enter option number to execute (1-3), or press Enter to skip: " choice
+    _read_input "Enter option number to execute (1-3), or press Enter to skip: " choice false
     
     if [[ "$choice" =~ ^[1-3]$ ]]; then
         local selected_command=$(echo "$options" | grep "^Option $choice:" | sed "s/Option $choice: //")
@@ -699,11 +762,10 @@ Requirements:
     
     echo "$script"
     echo ""
-    read -p "Save this script to a file? (y/n): " -n 1 -r
-    echo ""
+    _read_single_char "Save this script to a file? (y/n): " REPLY
     
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "Enter filename (e.g., backup.sh): " filename
+        _read_input "Enter filename (e.g., backup.sh): " filename false
         if [ -n "$filename" ]; then
             echo "$script" > "$filename"
             chmod +x "$filename"
@@ -738,8 +800,7 @@ _save_api_key() {
 ai-change() {
     echo "Change Gemini API Key"
     echo "===================="
-    read -p "Enter new API key: " -s new_key
-    echo ""
+    _read_input "Enter new API key: " new_key true
     if [ -z "$new_key" ]; then
         echo "Error: API key cannot be empty"
         return 1
@@ -749,8 +810,7 @@ ai-change() {
     echo "How would you like to save this key?"
     echo "1) Save permanently (recommended) [default]"
     echo "2) Use for this session only"
-    read -p "Choose option (1/2) [default: 1]: " -n 1 -r save_option
-    echo ""
+    _read_single_char "Choose option (1/2) [default: 1]: " save_option
     
     # Default to option 1 if Enter is pressed
     if [[ -z $save_option ]]; then
@@ -778,11 +838,12 @@ ai-uninstall() {
     echo "This will:"
     echo "  - Remove the saved API key"
     echo "  - Remove the version file"
+    echo "  - Remove command history"
+    echo "  - Remove model configuration"
     echo "  - Remove the script file (~/ai-command.sh)"
-    echo "  - Remove lines from ~/.bashrc"
+    echo "  - Remove lines from ~/.bashrc and ~/.zshrc (if present)"
     echo ""
-    read -p "Are you sure? (y/n): " -n 1 -r
-    echo ""
+    _read_single_char "Are you sure? (y/n): " REPLY
     
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "Uninstall cancelled."
@@ -819,6 +880,12 @@ ai-uninstall() {
         echo "Removed from ~/.bashrc"
     fi
     
+    # Remove from zshrc
+    if [ -f "$HOME/.zshrc" ]; then
+        sed -i '/source.*ai-command\.sh/d' "$HOME/.zshrc"
+        echo "Removed from ~/.zshrc"
+    fi
+    
     # Unset functions and aliases
     unset -f ai aicmd ai-change ai-uninstall ai-reload ai-update ai-version ai-list-versions ai-help ai-history ai-model ai-usage ai-explain ai-multi ai-script _load_api_key _save_api_key _get_current_version _save_version _get_current_model _save_model _add_to_history _print_colored _offline_suggest
     unalias aicmd 2>/dev/null
@@ -836,7 +903,17 @@ ai-uninstall() {
     echo ""
     echo "AI Command Generator uninstalled successfully!"
     echo "All files have been removed."
-    echo "Please restart your terminal or run: source ~/.bashrc"
+    echo ""
+    echo "Reloading shell configuration..."
+    
+    # Automatically reload shell configuration
+    if [ "$CURRENT_SHELL" = "zsh" ]; then
+        source ~/.zshrc 2>/dev/null || echo "Note: Please restart your terminal to complete uninstallation"
+    else
+        source ~/.bashrc 2>/dev/null || echo "Note: Please restart your terminal to complete uninstallation"
+    fi
+    
+    echo "Uninstallation complete!"
 }
 
 ai() {
@@ -880,8 +957,7 @@ ai() {
     if [ -z "$GEMINI_API_KEY" ]; then
         echo "Gemini API key not found."
         echo ""
-        read -p "Enter your Gemini API key: " -s api_key
-        echo ""
+        _read_input "Enter your Gemini API key: " api_key true
         if [ -z "$api_key" ]; then
             echo "Error: API key cannot be empty"
             return 1
@@ -891,8 +967,7 @@ ai() {
         echo "How would you like to save this key?"
         echo "1) Save permanently (recommended) [default]"
         echo "2) Use for this session only"
-        read -p "Choose option (1/2) [default: 1]: " -n 1 -r save_option
-        echo ""
+        _read_single_char "Choose option (1/2) [default: 1]: " save_option
         
         # Default to option 1 if Enter is pressed
         if [[ -z $save_option ]]; then
@@ -959,8 +1034,7 @@ Rules:
         echo "Your API key is not valid or has expired."
         echo "Please update your API key to continue."
         echo ""
-        read -p "Would you like to change your API key now? (y/n): " -n 1 -r
-        echo ""
+        _read_single_char "Would you like to change your API key now? (y/n): " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             ai-change
             echo ""
@@ -1005,8 +1079,7 @@ Rules:
         eval "$command"
     else
         # Ask user if they want to execute it
-        read -p "Execute this command? (Y/n) [default: Y]: " -n 1 -r
-        echo
+        _read_single_char "Execute this command? (Y/n) [default: Y]: " REPLY
         if [[ -z $REPLY ]] || [[ $REPLY =~ ^[Yy]$ ]]; then
             eval "$command"
         else

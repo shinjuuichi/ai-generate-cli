@@ -12,7 +12,9 @@ Generate shell commands from natural language using Google's Gemini API.
 
 ### 2. Install
 
-#### Quick Install (Latest Version)
+#### For Bash (Ubuntu, Debian, etc.)
+
+##### Quick Install (Latest Version)
 
 ```bash
 bash -c 'VERSION=$(curl -s https://api.github.com/repos/shinjuuichi/ai-generate-cli/releases/latest | grep "tag_name" | sed -E "s/.*\"([^\"]+)\".*/\1/") && \
@@ -21,7 +23,7 @@ chmod +x ~/ai-command.sh && \
 echo "source ~/ai-command.sh" >> ~/.bashrc' && source ~/.bashrc && source ~/ai-command.sh
 ```
 
-#### Install Specific Version
+##### Install Specific Version
 
 View all available versions: [Releases](https://github.com/shinjuuichi/ai-generate-cli/releases)
 
@@ -30,6 +32,28 @@ View all available versions: [Releases](https://github.com/shinjuuichi/ai-genera
 VERSION="v1.0.0" bash -c 'curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh" && \
 chmod +x ~/ai-command.sh && \
 echo "source ~/ai-command.sh" >> ~/.bashrc' && source ~/.bashrc && source ~/ai-command.sh
+```
+
+#### For Zsh (Kali Linux, macOS, etc.)
+
+##### Quick Install (Latest Version)
+
+```zsh
+zsh -c 'VERSION=$(curl -s https://api.github.com/repos/shinjuuichi/ai-generate-cli/releases/latest | grep "tag_name" | sed -E "s/.*\"([^\"]+)\".*/\1/") && \
+curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh" && \
+chmod +x ~/ai-command.sh && \
+echo "source ~/ai-command.sh" >> ~/.zshrc' && source ~/.zshrc && source ~/ai-command.sh
+```
+
+##### Install Specific Version
+
+View all available versions: [Releases](https://github.com/shinjuuichi/ai-generate-cli/releases)
+
+```zsh
+# You can replace v2.0.0 with any version tag you want to install
+VERSION="v2.0.0" zsh -c 'curl -L -o ~/ai-command.sh "https://github.com/shinjuuichi/ai-generate-cli/releases/download/$VERSION/ai-command.sh" && \
+chmod +x ~/ai-command.sh && \
+echo "source ~/ai-command.sh" >> ~/.zshrc' && source ~/.zshrc && source ~/ai-command.sh
 ```
 
 ### 3. First Use
@@ -276,14 +300,17 @@ aihelp  # Show help
 ### Core Features
 
 - Natural language to shell command conversion
+- **Shell Compatibility** - Works with both Bash and Zsh
 - Preview command before execution
 - Safe confirmation prompt
-- Works with bash and other shells
-- OS-aware command generation
+- OS-aware command generation (Linux, macOS, etc.)
 - Fast response using Gemini models
 
-### New in v1.1.0
+### Other Features
 
+- **Zsh Support** - Full compatibility with Zsh (Kali Linux, macOS default)
+- **Shell Auto-detection** - Automatically detects and adapts to your shell
+- Improved installation for both Bash and Zsh users
 - **Command History Tracking** - Never lose a generated command
 - **Auto-run Mode** - Skip confirmation with `-y` flag
 - **Script Generation** - Create full scripts, not just one-liners
@@ -502,7 +529,9 @@ ai-ver
 
 ## Requirements
 
-- Bash shell (or compatible shell)
+- **Bash or Zsh shell**
+  - Bash (Ubuntu, Debian, most Linux distributions)
+  - Zsh (Kali Linux, macOS default, Oh My Zsh users)
 - curl command
 - grep and sed utilities
 - Internet connection
