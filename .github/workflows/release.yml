@@ -3,7 +3,7 @@ name: Create Release with Asset
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -15,23 +15,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for release notes
+        id: check_notes
+        run: |
+          NOTES_FILE="RELEASE_NOTES_${{ github.ref_name }}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "notes_exist=true" >> $GITHUB_OUTPUT
+            echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "notes_exist=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
+          name: AI Command Generator ${{ github.ref_name }}
+          body_path: ${{ steps.check_notes.outputs.notes_exist == 'true' && steps.check_notes.outputs.notes_file || '' }}
+          files: ai-command.sh
           draft: false
           prerelease: false
-
-      - name: Upload ai-command.sh
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ai-command.sh
-          asset_name: ai-command.sh
-          asset_content_type: application/x-sh
