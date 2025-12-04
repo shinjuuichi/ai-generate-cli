@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="2.0.0"
+VERSION="2.0.1"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
@@ -236,8 +236,8 @@ ai-update() {
         echo "3) Cancel"
         _read_single_char "Choose option (1/2/3) [default: 1]: " update_option
         
-        # Default to option 1 if Enter is pressed
-        if [[ -z $update_option ]]; then
+        # Default to option 1 if Enter is pressed or empty
+        if [[ -z "$update_option" ]] || [[ "$update_option" == $'\n' ]] || [[ "$update_option" == "" ]]; then
             update_option="1"
         fi
         
@@ -380,7 +380,8 @@ ai-history() {
     case "$1" in
         --clear)
             _read_single_char "Clear all command history? (y/n): " REPLY
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
+            local reply_lower=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
+            if [[ "$reply_lower" == "y" ]]; then
                 rm "$AI_HISTORY_FILE"
                 echo "Command history cleared."
             else
@@ -520,7 +521,8 @@ ai-usage() {
         echo "  5. Change to a different API key"
         echo ""
         _read_single_char "Would you like to change your API key now? (y/n): " REPLY
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        local reply_lower=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
+        if [[ "$reply_lower" == "y" ]]; then
             ai-change
             echo ""
             echo "Please try your command again with the new API key."
@@ -763,8 +765,9 @@ Requirements:
     echo "$script"
     echo ""
     _read_single_char "Save this script to a file? (y/n): " REPLY
+    local reply_lower=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
     
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$reply_lower" == "y" ]]; then
         _read_input "Enter filename (e.g., backup.sh): " filename false
         if [ -n "$filename" ]; then
             echo "$script" > "$filename"
@@ -812,8 +815,8 @@ ai-change() {
     echo "2) Use for this session only"
     _read_single_char "Choose option (1/2) [default: 1]: " save_option
     
-    # Default to option 1 if Enter is pressed
-    if [[ -z $save_option ]]; then
+    # Default to option 1 if Enter is pressed or empty
+    if [[ -z "$save_option" ]] || [[ "$save_option" == $'\n' ]] || [[ "$save_option" == "" ]]; then
         save_option="1"
     fi
     
@@ -844,8 +847,9 @@ ai-uninstall() {
     echo "  - Remove lines from ~/.bashrc and ~/.zshrc (if present)"
     echo ""
     _read_single_char "Are you sure? (y/n): " REPLY
+    local reply_lower=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
     
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    if [[ ! "$reply_lower" == "y" ]]; then
         echo "Uninstall cancelled."
         return 0
     fi
@@ -969,8 +973,8 @@ ai() {
         echo "2) Use for this session only"
         _read_single_char "Choose option (1/2) [default: 1]: " save_option
         
-        # Default to option 1 if Enter is pressed
-        if [[ -z $save_option ]]; then
+        # Default to option 1 if Enter is pressed or empty
+        if [[ -z "$save_option" ]] || [[ "$save_option" == $'\n' ]] || [[ "$save_option" == "" ]]; then
             save_option="1"
         fi
         
@@ -1035,7 +1039,8 @@ Rules:
         echo "Please update your API key to continue."
         echo ""
         _read_single_char "Would you like to change your API key now? (y/n): " REPLY
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        local reply_lower=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
+        if [[ "$reply_lower" == "y" ]]; then
             ai-change
             echo ""
             echo "Please try your command again."
@@ -1080,7 +1085,9 @@ Rules:
     else
         # Ask user if they want to execute it
         _read_single_char "Execute this command? (Y/n) [default: Y]: " REPLY
-        if [[ -z $REPLY ]] || [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Default to Yes if Enter is pressed or empty, case-insensitive Y
+        local reply_lower=$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')
+        if [[ -z "$REPLY" ]] || [[ "$REPLY" == $'\n' ]] || [[ "$REPLY" == "" ]] || [[ "$reply_lower" == "y" ]]; then
             eval "$command"
         else
             echo "Command not executed. You can copy it from above."
