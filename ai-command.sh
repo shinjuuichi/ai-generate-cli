@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="5.0.6"
+VERSION="5.0.7"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
@@ -842,7 +842,8 @@ ai-usage() {
             echo "Please try your command again with the new API key."
         fi
         return 1
-    elif echo "$test_response" | grep -q '"text"'; then
+    elif echo "$test_response" | grep -q '"candidates"' && echo "$test_response" | grep -q '"content"'; then
+        # Successfully got a response with content
         _print_colored "$COLOR_GREEN" "✓ Status: API Key Active & Working"
         echo ""
         echo "API Information:"
@@ -870,8 +871,11 @@ ai-usage() {
         echo ""
         echo "Received an unexpected response from the API."
         echo ""
-        _print_colored "$COLOR_YELLOW" "Response details:"
-        echo "$test_response" | head -5
+        _print_colored "$COLOR_YELLOW" "Response details (first 10 lines):"
+        echo "$test_response" | head -10
+        echo ""
+        _print_colored "$COLOR_YELLOW" "Full response length:"
+        echo "$test_response" | wc -c
         echo ""
         echo "This might indicate:"
         echo "  • API service issues"
