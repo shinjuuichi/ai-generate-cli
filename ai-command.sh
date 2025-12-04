@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="5.0.4"
+VERSION="5.0.5"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
@@ -383,8 +383,41 @@ _offline_suggest() {
     return 0
 }
 
+# Fetch and display release notes for a specific version
+_show_release_notes() {
+    local version="$1"
+    
+    echo ""
+    _print_colored "$COLOR_CYAN" "📋 What's new in $version:"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Fetch release info from GitHub
+    local release_info=$(curl -s "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/tags/$version")
+    
+    if [ -z "$release_info" ] || echo "$release_info" | grep -q '"message": *"Not Found"'; then
+        _print_colored "$COLOR_YELLOW" "⚠ Release notes not available for this version"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        return 1
+    fi
+    
+    # Extract release body (changelog)
+    local release_body=$(echo "$release_info" | sed -n '/"body":/,/"draft":/p' | sed '1d;$d' | sed 's/^[[:space:]]*"body": "//;s/",[[:space:]]*$//' | sed 's/\\n/\n/g' | sed 's/\\r//g')
+    
+    if [ -n "$release_body" ]; then
+        echo "$release_body"
+    else
+        _print_colored "$COLOR_YELLOW" "No detailed changelog available"
+    fi
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    return 0
+}
+
 # List available versions from GitHub releases
-ai-list-versions() {
+ai-ls() {
+    local show_details="$1"
+    
     echo "Fetching available versions from GitHub..."
     local releases=$(curl -s "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases")
     
@@ -396,8 +429,38 @@ ai-list-versions() {
     echo ""
     echo "Available versions:"
     echo "=================="
-    echo "$releases" | grep -o '"tag_name": *"[^"]*"' | sed 's/"tag_name": *"\(.*\)"/\1/' | nl
+    
+    # Parse and display versions
+    local version_list=$(echo "$releases" | grep -o '"tag_name": *"[^"]*"' | sed 's/"tag_name": *"\(.*\)"/\1/')
+    local count=1
+    
+    while IFS= read -r version; do
+        if [ -n "$version" ]; then
+            printf "%2d) %s" "$count" "$version"
+            
+            # Show brief description if available
+            if [ "$show_details" = "-d" ] || [ "$show_details" = "--details" ]; then
+                local release_name=$(echo "$releases" | grep -A 2 "\"tag_name\": \"$version\"" | grep '"name":' | head -1 | sed 's/.*"name": *"\([^"]*\)".*/\1/')
+                if [ -n "$release_name" ] && [ "$release_name" != "$version" ]; then
+                    echo " - $release_name"
+                else
+                    echo ""
+                fi
+            else
+                echo ""
+            fi
+            
+            count=$((count + 1))
+        fi
+    done <<< "$version_list"
+    
+    echo ""
+    echo "Use 'ai-ls -d' to see release names"
+    echo "Use 'ai-update <version>' to see full changelog and install"
 }
+
+# Alias for backward compatibility
+alias ai-list-versions='ai-ls'
 
 # Update function (fetch specific version or latest from GitHub releases)
 ai-update() {
@@ -460,6 +523,18 @@ ai-update() {
         fi
     fi
     
+    # Show release notes before downloading
+    _show_release_notes "$target_version"
+    
+    # Ask for confirmation before proceeding with download
+    _read_single_char "Proceed with update to $target_version? (Y/n) [default: Y]: " proceed_reply
+    local proceed_lower=$(echo "$proceed_reply" | tr '[:upper:]' '[:lower:]')
+    
+    if [[ -n "$proceed_reply" ]] && [[ "$proceed_lower" == "n" ]]; then
+        echo "Update cancelled."
+        return 0
+    fi
+    
     echo ""
     echo "Downloading version $target_version..."
     
@@ -470,7 +545,7 @@ ai-update() {
     
     if [ "$http_code" != "200" ]; then
         echo "Error: Version $target_version not found or download failed (HTTP $http_code)"
-        echo "Use 'ai-list-versions' to see available versions."
+        echo "Use 'ai-ls' to see available versions."
         echo ""
         echo "Download URL attempted: $download_url"
         rm -f "$temp_file"
@@ -508,7 +583,7 @@ ai-version() {
     echo "Current version: $current_version"
     echo "Script version: $VERSION"
     echo ""
-    echo "Use 'ai-list-versions' to see all available versions"
+    echo "Use 'ai-ls' to see all available versions"
     echo "Use 'ai-update' to update or change version"
     echo "Use 'ai-update <version>' to install specific version (e.g., ai-update 1.0.0)"
 }
@@ -559,9 +634,10 @@ ai-help() {
     echo "  ai-version                    Show version info"
     echo ""
     echo "UPDATE & MAINTENANCE:"
-    echo "  ai-update                     Update to latest version"
-    echo "  ai-update <version>           Install specific version"
-    echo "  ai-list-versions              List all available versions"
+    echo "  ai-update                     Update to latest version (shows changelog)"
+    echo "  ai-update <version>           Install specific version (shows changelog)"
+    echo "  ai-ls                         List all available versions"
+    echo "  ai-ls -d                      List versions with details"
     echo "  ai-uninstall                  Uninstall the tool"
     echo ""
     echo "EXAMPLES:"
