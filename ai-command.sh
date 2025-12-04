@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="3.0.0"
+VERSION="3.0.1"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
@@ -25,6 +25,7 @@ AI_MODEL_FILE="$AI_CONFIG_DIR/model"
 AI_CONTEXT_FILE="$AI_CONFIG_DIR/context"
 AI_CONTEXT_HISTORY_FILE="$AI_CONFIG_DIR/context-history"
 AI_USE_TREE_FILE="$AI_CONFIG_DIR/use-tree"
+AI_MAX_TOKENS_FILE="$AI_CONFIG_DIR/max-tokens"
 
 # Create config directory if it doesn't exist
 if [ ! -d "$AI_CONFIG_DIR" ]; then
@@ -33,6 +34,9 @@ fi
 
 # Default Gemini model
 DEFAULT_MODEL="gemini-2.5-flash"
+
+# Default max output tokens
+DEFAULT_MAX_TOKENS=2000
 
 # Available Gemini models
 GEMINI_MODELS=(
@@ -205,6 +209,21 @@ _should_use_tree() {
 _save_tree_preference() {
     local use_tree="$1"
     echo "$use_tree" > "$AI_USE_TREE_FILE"
+}
+
+# Get current max tokens setting
+_get_max_tokens() {
+    if [ -f "$AI_MAX_TOKENS_FILE" ]; then
+        cat "$AI_MAX_TOKENS_FILE"
+    else
+        echo "$DEFAULT_MAX_TOKENS"
+    fi
+}
+
+# Save max tokens setting
+_save_max_tokens() {
+    local max_tokens="$1"
+    echo "$max_tokens" > "$AI_MAX_TOKENS_FILE"
 }
 
 # Get directory tree (limited depth for context)
@@ -1162,6 +1181,9 @@ Rules:
 - Make it a single line command when possible
 - Use common, safe commands"
 
+    # Get max tokens setting
+    local max_tokens=$(_get_max_tokens)
+
     # Make API call to Gemini
     local response=$(curl -s -X POST \
         "https://generativelanguage.googleapis.com/v1/models/${current_model}:generateContent?key=$GEMINI_API_KEY" \
@@ -1174,7 +1196,7 @@ Rules:
             }],
             \"generationConfig\": {
                 \"temperature\": 0.2,
-                \"maxOutputTokens\": 2000
+                \"maxOutputTokens\": $max_tokens
             }
         }")
 
@@ -1193,6 +1215,50 @@ Rules:
             echo "Please try your command again."
         else
             echo "You can change your API key anytime using: ai-change"
+        fi
+        return 1
+    fi
+
+    # Check for MAX_TOKENS error (output limit exceeded)
+    if echo "$response" | grep -q '"finishReason": *"MAX_TOKENS"'; then
+        local current_limit=$(_get_max_tokens)
+        _print_colored "$COLOR_RED" "Error: Token limit exceeded"
+        echo ""
+        echo "The API response was truncated because it exceeded the maximum token limit."
+        echo "Current limit: $current_limit tokens"
+        echo ""
+        echo "What would you like to do?"
+        echo "1) Increase limit by 1000 tokens (to $((current_limit + 1000))) [default]"
+        echo "2) Set custom limit"
+        echo "3) Clear context and retry with current limit"
+        echo "4) Cancel"
+        _read_single_char "Choose option (1/2/3/4) [default: 1]: " limit_option
+        
+        # Default to option 1 if Enter is pressed or empty
+        if [[ -z "$limit_option" ]] || [[ "$limit_option" == $'\n' ]] || [[ "$limit_option" == "" ]]; then
+            limit_option="1"
+        fi
+        
+        if [[ $limit_option == "1" ]]; then
+            local new_limit=$((current_limit + 1000))
+            _save_max_tokens "$new_limit"
+            _print_colored "$COLOR_GREEN" "✓ Token limit increased to $new_limit"
+            echo "Please try your command again."
+        elif [[ $limit_option == "2" ]]; then
+            _read_input "Enter new token limit (current: $current_limit): " new_limit false
+            if [[ "$new_limit" =~ ^[0-9]+$ ]] && [ "$new_limit" -gt 0 ]; then
+                _save_max_tokens "$new_limit"
+                _print_colored "$COLOR_GREEN" "✓ Token limit set to $new_limit"
+                echo "Please try your command again."
+            else
+                echo "Invalid input. Token limit not changed."
+            fi
+        elif [[ $limit_option == "3" ]]; then
+            _clear_context
+            _print_colored "$COLOR_GREEN" "✓ Context cleared"
+            echo "Please try your command again."
+        else
+            echo "Operation cancelled."
         fi
         return 1
     fi
