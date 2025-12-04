@@ -277,10 +277,11 @@ Perfect for:
 ai-change            # Change your API key
 ai-usage             # Check API usage and rate limits
 ai-reload            # Reload local script
-ai-update            # Update to latest version (interactive)
-ai-update <version>  # Install specific version (e.g., ai-update 1.1.0)
+ai-update            # Update to latest version (shows changelog)
+ai-update <version>  # Install specific version (shows changelog)
 ai-version           # Show current version
-ai-list-versions     # List all available versions
+ai-ls                # List all available versions
+ai-ls -d             # List versions with details
 ai-uninstall         # Uninstall the tool
 reload               # Alias for ai-reload
 update               # Alias for ai-update
@@ -537,25 +538,28 @@ update
 ai-update
 ```
 
-This will show you available versions and let you choose:
+This will:
 
-- Update to latest version
-- Choose specific version
-- Cancel
+- Show you what's new in the version (changelog)
+- Let you choose to update to latest, pick a specific version, or cancel
+- Display release notes before downloading
 
 ### Want to install a specific version or downgrade?
 
 ```bash
-# Interactive selection
+# Interactive selection with changelog
 ai-update
 
-# Direct version install
+# Direct version install (shows changelog before download)
 ai-update 1.1.0
 # or
 ai-update v1.1.0
 
 # List all available versions first
-ai-list-versions
+ai-ls
+
+# List versions with details
+ai-ls -d
 ```
 
 ### Want to check your current version?
@@ -586,14 +590,14 @@ ai-ver
 
 ### Management Commands
 
-| Command            | Description       |
-| ------------------ | ----------------- |
-| `ai-change`        | Change API key    |
-| `ai-reload`        | Reload script     |
-| `ai-update`        | Update version    |
-| `ai-version`       | Show version info |
-| `ai-list-versions` | List all versions |
-| `ai-uninstall`     | Remove the tool   |
+| Command        | Description       |
+| -------------- | ----------------- |
+| `ai-change`    | Change API key    |
+| `ai-reload`    | Reload script     |
+| `ai-update`    | Update version    |
+| `ai-version`   | Show version info |
+| `ai-ls`        | List all versions |
+| `ai-uninstall` | Remove the tool   |
 
 ## Requirements
 
