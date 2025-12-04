@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="5.0.7"
+VERSION="5.0.8"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
@@ -846,17 +846,42 @@ ai-usage() {
         # Successfully got a response with content
         _print_colored "$COLOR_GREEN" "✓ Status: API Key Active & Working"
         echo ""
+        
+        # Extract token usage from response
+        local prompt_tokens=$(echo "$test_response" | grep -o '"promptTokenCount": *[0-9]*' | grep -o '[0-9]*' | head -1)
+        local candidates_tokens=$(echo "$test_response" | grep -o '"candidatesTokenCount": *[0-9]*' | grep -o '[0-9]*' | head -1)
+        local total_tokens=$(echo "$test_response" | grep -o '"totalTokenCount": *[0-9]*' | grep -o '[0-9]*' | head -1)
+        
         echo "API Information:"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "Current model: $current_model"
         echo "API Key: ${GEMINI_API_KEY:0:10}...${GEMINI_API_KEY: -4}"
         echo ""
+        
+        # Display token usage from test request
+        if [ -n "$total_tokens" ]; then
+            echo "Test Request Token Usage:"
+            echo "  • Input tokens: ${prompt_tokens:-0}"
+            echo "  • Output tokens: ${candidates_tokens:-0}"
+            echo "  • Total tokens: $total_tokens"
+            echo ""
+        fi
+        
         echo "Rate Limits (Free Tier):"
         echo "  • Requests per minute: ~15"
         echo "  • Requests per day: ~1,500"
         echo "  • Tokens per minute: ~32,000"
         echo ""
+        
+        # Calculate approximate remaining tokens for the day
+        local daily_limit=1500
+        echo "Daily Request Estimates:"
+        echo "  • Total requests available: ~$daily_limit requests/day"
+        echo "  • This varies by account and model tier"
+        echo ""
+        
         echo "Note: Actual limits may vary by model and account type."
+        echo "      Google does not provide a direct API to check remaining quota."
         echo ""
         _print_colored "$COLOR_CYAN" "Monitor your usage at:"
         echo "https://aistudio.google.com/"
