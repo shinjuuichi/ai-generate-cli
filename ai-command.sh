@@ -5,7 +5,7 @@
 # Add this to your ~/.bashrc or ~/.zshrc or source it: source ~/path/to/ai-command.sh
 
 # Version
-VERSION="3.0.1"
+VERSION="4.0.0"
 
 # Detect shell type
 if [ -n "$BASH_VERSION" ]; then
@@ -26,6 +26,7 @@ AI_CONTEXT_FILE="$AI_CONFIG_DIR/context"
 AI_CONTEXT_HISTORY_FILE="$AI_CONFIG_DIR/context-history"
 AI_USE_TREE_FILE="$AI_CONFIG_DIR/use-tree"
 AI_MAX_TOKENS_FILE="$AI_CONFIG_DIR/max-tokens"
+AI_VERSION_CHECK_FILE="$AI_CONFIG_DIR/version-check"
 
 # Create config directory if it doesn't exist
 if [ ! -d "$AI_CONFIG_DIR" ]; then
@@ -224,6 +225,86 @@ _get_max_tokens() {
 _save_max_tokens() {
     local max_tokens="$1"
     echo "$max_tokens" > "$AI_MAX_TOKENS_FILE"
+}
+
+# Check if version check was done today
+_should_check_version() {
+    if [ ! -f "$AI_VERSION_CHECK_FILE" ]; then
+        return 0  # Should check
+    fi
+    
+    local last_check=$(cat "$AI_VERSION_CHECK_FILE")
+    local today=$(date '+%Y-%m-%d')
+    
+    if [ "$last_check" != "$today" ]; then
+        return 0  # Should check
+    fi
+    
+    return 1  # Already checked today
+}
+
+# Mark version check as done today
+_mark_version_checked() {
+    local today=$(date '+%Y-%m-%d')
+    echo "$today" > "$AI_VERSION_CHECK_FILE"
+}
+
+# Check for new version and prompt user
+_check_for_update() {
+    if ! _should_check_version; then
+        return 0  # Already checked today
+    fi
+    
+    local current_version=$(_get_current_version)
+    
+    # Fetch latest release info from GitHub silently
+    local release_info=$(curl -s "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest")
+    local latest_version=$(echo "$release_info" | grep -o '"tag_name": *"[^"]*"' | head -1 | sed 's/"tag_name": *"\(.*\)"/\1/')
+    
+    if [ -z "$latest_version" ]; then
+        # Failed to check, mark as checked to avoid repeated failures
+        _mark_version_checked
+        return 0
+    fi
+    
+    # Mark as checked regardless of outcome
+    _mark_version_checked
+    
+    # Compare versions (remove 'v' prefix if present)
+    local current_clean=$(echo "$current_version" | sed 's/^v//')
+    local latest_clean=$(echo "$latest_version" | sed 's/^v//')
+    
+    if [ "$current_clean" != "$latest_clean" ] && [ "$current_version" != "unknown" ]; then
+        echo ""
+        _print_colored "$COLOR_YELLOW" "🔔 New version available: $latest_version (current: $current_version)"
+        echo ""
+        
+        # Extract and display release notes/body
+        local release_body=$(echo "$release_info" | sed -n '/"body":/,/"draft":/p' | sed '1d;$d' | sed 's/^[[:space:]]*"body": "//;s/",[[:space:]]*$//' | sed 's/\\n/\n/g' | sed 's/\\r//g' | head -20)
+        
+        if [ -n "$release_body" ]; then
+            _print_colored "$COLOR_CYAN" "What's new in $latest_version:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "$release_body"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+        fi
+        
+        _read_single_char "Would you like to update now? (y/n) [default: n]: " update_reply
+        local reply_lower=$(echo "$update_reply" | tr '[:upper:]' '[:lower:]')
+        
+        if [[ "$reply_lower" == "y" ]]; then
+            echo ""
+            ai-update "$latest_version"
+            return 1  # Return 1 to indicate update was performed
+        else
+            echo ""
+            echo "You can update later using: ai-update"
+            echo ""
+        fi
+    fi
+    
+    return 0
 }
 
 # Get directory tree (limited depth for context)
@@ -1075,6 +1156,13 @@ ai() {
         USE_COLOR=true
     else
         USE_COLOR=false
+    fi
+    
+    # Check for updates (only once per day)
+    _check_for_update
+    if [ $? -eq 1 ]; then
+        # Update was performed, script was reloaded
+        return 0
     fi
     
     # Load API key from config if exists
